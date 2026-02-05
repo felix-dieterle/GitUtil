@@ -15,7 +15,9 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Make test scripts executable
-      run: chmod +x tests/*.sh
+      run: |
+        chmod +x tests/*.sh
+        chmod +x gitutil.sh
       
     - name: Run test suite
       run: ./tests/run_tests.sh
