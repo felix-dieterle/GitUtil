@@ -1,0 +1,130 @@
+name: Package Mobile Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  package-mobile-ui:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          if [[ "${GITHUB_REF}" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Assemble mobile package
+        run: |
+          PKG_NAME="gitutil-mobile-${{ steps.extract_version.outputs.version }}"
+          mkdir -p "dist/${PKG_NAME}"
+          
+          cp -r mobile "dist/${PKG_NAME}/"
+          cp -r scripts "dist/${PKG_NAME}/"
+          cp README.md "dist/${PKG_NAME}/"
+          
+          cat > "dist/${PKG_NAME}/INSTALL.txt" << 'INSTRUCTIONS'
+          GitUtil Mobile - Installation Instructions
+          ==========================================
+          
+          For Android (Termux):
+          --------------------
+          1. Install Termux from F-Droid
+          2. Install required packages:
+             pkg install git bash
+          
+          3. Extract this package to your device:
+             unzip gitutil-mobile-*.zip
+             cd gitutil-mobile-*
+          
+          4. Launch the mobile interface:
+             bash mobile/launch-mobile.sh
+          
+          5. Open the displayed file path in your browser
+          
+          Usage:
+          ------
+          - Enter your git repository path (e.g., /sdcard/repos/myproject)
+          - Browse commit snapshots
+          - Tap a snapshot to select it
+          - Use "Apply Rollback" to reset your branch
+          
+          Tips:
+          -----
+          - Bookmark the touch-ui.html file for quick access
+          - The interface remembers your last repository path
+          - All operations use the existing shell scripts
+          
+          Support:
+          --------
+          See README.md for full documentation
+          INSTRUCTIONS
+          
+          cd dist
+          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
+          tar -czf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
+          
+          echo "Package created: ${PKG_NAME}"
+          ls -lh "${PKG_NAME}".{zip,tar.gz}
+      
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum gitutil-mobile-*.zip > checksums.txt
+          sha256sum gitutil-mobile-*.tar.gz >> checksums.txt
+          cat checksums.txt
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/gitutil-mobile-*.zip
+            dist/gitutil-mobile-*.tar.gz
+            dist/checksums.txt
+          body: |
+            ## GitUtil Mobile Release ${{ steps.extract_version.outputs.version }}
+            
+            ### 📱 Mobile Web Interface for Android
+            
+            This release includes a mobile-friendly web interface designed for Android devices running Termux.
+            
+            **Features:**
+            - Touch-optimized UI with large tap targets
+            - Repository validation and browsing
+            - Visual commit timeline
+            - One-tap branch rollback
+            - Offline-capable HTML interface
+            
+            **Installation:**
+            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.zip`
+            2. Extract on your Android device
+            3. Follow instructions in `INSTALL.txt`
+            
+            **Requirements:**
+            - Android device with Termux installed
+            - Git and Bash packages in Termux
+            - Web browser
+            
+            See the included README.md for complete documentation.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-packages
+          path: |
+            dist/gitutil-mobile-*.zip
+            dist/gitutil-mobile-*.tar.gz
+            dist/checksums.txt
+          retention-days: 90
