@@ -12,22 +12,37 @@ This mobile interface provides a finger-friendly way to browse commit history an
 Self-contained HTML interface with embedded CSS and JavaScript. Features:
 - **Responsive design** - Adapts to any screen size
 - **Touch-optimized** - 54px minimum tap targets
-- **Offline-capable** - No internet required after initial setup
+- **HTTP-based communication** - Connects to bridge server via fetch API
 - **State persistence** - Remembers last repository path
 - **Visual feedback** - Color-coded messages and loading indicators
 
 Design principles:
 - Custom CSS variables for consistent theming
 - Widget-based state machine architecture
-- Minified for faster loading on mobile
 - Accessibility-friendly with proper semantic HTML
+- Clean separation between UI and business logic
+
+### `wrapper-bridge.py`
+Python micro-HTTP server that bridges the UI to shell wrappers. Features:
+- **Lightweight HTTP server** - Listens on localhost:8765
+- **CORS-enabled** - Allows browser communication
+- **Wrapper execution** - Safely runs shell scripts with arguments
+- **JSON API** - Structured request/response format
+- **Timeout protection** - 30-second execution limit
+
+The bridge server:
+- Serves the HTML interface on GET /
+- Executes wrappers via POST /exec-wrapper
+- Returns JSON with stdout, stderr, and exit codes
+- Handles errors gracefully
 
 ### `launch-mobile.sh`
 Launcher script that:
 - Auto-generates wrapper scripts
 - Sets up the wrapper directory structure
+- Starts the Python bridge server
 - Opens the interface in the default browser
-- Provides fallback instructions if auto-launch fails
+- Manages server lifecycle (start/stop)
 
 ### `wrappers/` (auto-generated)
 Shell script wrappers that bridge the UI to core functionality:
@@ -56,29 +71,30 @@ State transitions:
 
 ### Data Flow
 ```
-User Input → UI Widget → Wrapper Script → Core Shell Script → Git
-                ↑                                                ↓
-                └────────────── Result Processing ←──────────────┘
+User Input → UI Widget → HTTP POST → Bridge Server → Wrapper Script → Git
+                ↑                                                        ↓
+                └─────────── JSON Response ←──────────────────────────────┘
 ```
 
-### Wrapper Protocol
+### Communication Protocol
 
-**Input format:** Command-line arguments passed to wrappers
-```bash
-check-location.sh "/path/to/repo"
-pull-timeline.sh "/path/to/repo"
-apply-rollback.sh "/path/to/repo" "abc123def456..."
+**Request to bridge server:**
+```json
+POST /exec-wrapper
+{
+  "wrapper": "check-location",
+  "args": ["/path/to/repo"]
+}
 ```
 
-**Output format:** Structured text parsed by JavaScript
-```
-SNAPSHOT_BEGIN
-IDENTIFIER:abc123def456...
-CONTRIBUTOR:John Doe
-WHEN:1234567890
-TITLE:Commit message
-DETAILS:Extended description
-SNAPSHOT_END
+**Response from bridge:**
+```json
+{
+  "success": true,
+  "output": "LOCATION_VALID\n",
+  "errors": "",
+  "exit_code": 0
+}
 ```
 
 ## Usage
@@ -88,22 +104,28 @@ SNAPSHOT_END
 bash mobile/launch-mobile.sh
 ```
 
-### Advanced Options
-```bash
-# Specify custom wrapper location
-export WRAPPER_DIR="/custom/path"
-bash mobile/launch-mobile.sh
+This will:
+1. Generate wrapper scripts
+2. Start the bridge server on port 8765
+3. Open http://localhost:8765 in your browser
 
-# Direct HTML access (after wrappers are generated)
-open mobile/touch-ui.html
+### Manual Server Start
+```bash
+# Start bridge server manually
+python3 mobile/wrapper-bridge.py
+
+# In another terminal or browser, access:
+# http://localhost:8765
 ```
 
-### Manual Wrapper Generation
-If you need to regenerate wrappers:
+### Custom Port
 ```bash
-rm -rf mobile/wrappers
-bash mobile/launch-mobile.sh
+python3 mobile/wrapper-bridge.py 9000
+# Then access http://localhost:9000
 ```
+
+### Stopping the Server
+Press Ctrl+C in the terminal where the bridge server is running.
 
 ## Customization
 
@@ -157,69 +179,82 @@ Test the mobile interface:
 
 ## Browser Compatibility
 
-Tested and working on:
+The interface works with any modern browser:
 - ✅ Chrome for Android
-- ✅ Firefox for Android
+- ✅ Firefox for Android  
 - ✅ Samsung Internet
 - ✅ Brave Browser
-- ✅ Desktop browsers (Chrome, Firefox, Safari)
+- ✅ Desktop browsers (via bridge server)
 
 Requirements:
 - ES6 JavaScript support
+- Fetch API
 - localStorage API
 - CSS Grid and Flexbox
+
+Note: The bridge server must be running on localhost for the interface to function.
 
 ## Performance
 
 Optimizations:
-- Minified CSS (no whitespace)
-- Inline styles (no external requests)
+- Minimal HTTP overhead (localhost only)
+- Inline styles (no external CSS)
 - Lazy DOM updates
-- Debounced scroll handling
-- Minimal dependencies (vanilla JS)
+- Debounced user interactions
+- No external dependencies
 
-Typical load times on Android:
-- First load: <200ms
-- Subsequent loads: <100ms (cached)
-- Timeline render: <50ms (100 commits)
+Typical performance on Android:
+- Bridge startup: <1 second
+- UI load time: <200ms
+- Wrapper execution: 50-500ms (depends on repo size)
+- Timeline render: <100ms (for 100 commits)
 
 ## Security Considerations
 
-- **No external resources** - All code is self-contained
-- **No network requests** - Works completely offline
-- **Local file access only** - Wrappers only access local repositories
-- **Confirmation dialogs** - Destructive actions require confirmation
-- **Input sanitization** - All user input is escaped before display
+- **Localhost only** - Bridge server only listens on 127.0.0.1
+- **No external requests** - All communication is local
+- **Subprocess isolation** - Wrappers run in separate processes
+- **Timeout protection** - 30-second execution limit prevents hangs
+- **Input validation** - Arguments passed as list (not shell string)
+- **Confirmation dialogs** - Destructive actions require user confirmation
+- **CORS restrictions** - Server only accepts requests from localhost
+
+Security features:
+- No shell injection - arguments are parameterized
+- No arbitrary code execution - only predefined wrappers
+- No network exposure - server is not accessible remotely
 
 ## Troubleshooting
 
-### Wrappers not found
+### Bridge server won't start
+```bash
+# Check Python 3 is installed
+python3 --version
+
+# Check port is available
+netstat -an | grep 8765
+
+# Try a different port
+python3 mobile/wrapper-bridge.py 9000
+```
+
+### UI can't connect to server
+```bash
+# Verify server is running
+ps aux | grep wrapper-bridge
+
+# Check server output for errors
+# Ensure you're accessing http://localhost:8765
+```
+
+### Wrappers not executing
 ```bash
 # Regenerate wrappers
 rm -rf mobile/wrappers
 bash mobile/launch-mobile.sh
-```
-
-### UI doesn't load
-```bash
-# Check file exists
-ls -la mobile/touch-ui.html
-
-# Open manually
-xdg-open mobile/touch-ui.html  # Linux
-open mobile/touch-ui.html      # macOS
-```
-
-### Rollback fails
-```bash
-# Verify git is accessible
-which git
 
 # Test wrapper directly
-bash mobile/wrappers/apply-rollback.sh /path/to/repo <hash>
-
-# Check git status
-cd /path/to/repo && git status
+bash mobile/wrappers/check-location.sh /path/to/repo
 ```
 
 ## Development

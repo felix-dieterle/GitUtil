@@ -53,7 +53,7 @@ This project uses a lightweight shell-based architecture:
 1. Install [Termux](https://f-droid.org/en/packages/com.termux/) from F-Droid
 2. Install required packages:
    ```bash
-   pkg install git bash
+   pkg install git bash python
    ```
 
 **Quick Start:**
@@ -68,8 +68,8 @@ bash mobile/launch-mobile.sh
 
 The launcher will:
 - Generate wrapper scripts automatically
+- Start the bridge server on localhost:8765
 - Open the interface in your browser
-- Provide the file path to bookmark
 
 **Using the Mobile Interface:**
 1. Enter your git repository path (e.g., `/sdcard/repos/my-project`)
@@ -79,11 +79,16 @@ The launcher will:
 5. Tap "Apply Rollback" to reset your branch to that snapshot
 6. Confirm the operation when prompted
 
+**Important Notes:**
+- Keep the terminal open - the bridge server must run while using the interface
+- Press Ctrl+C to stop the server when done
+- The interface connects to http://localhost:8765
+
 **Tips:**
-- Bookmark `touch-ui.html` for quick access without relaunching
+- Bookmark http://localhost:8765 for quick access
 - The interface remembers your last repository path
-- Works completely offline after initial setup
-- Compatible with any Android browser
+- Works with any git repository on your device
+- The bridge server provides secure localhost-only access
 
 ### Terminal Interface (Desktop/Server)
 
@@ -153,7 +158,7 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 
 ### For Mobile Interface (Android)
 - Android device with Termux installed
-- Git and Bash packages (`pkg install git bash`)
+- Git, Bash, and Python 3 packages (`pkg install git bash python`)
 - Web browser (any Android browser)
 - Storage access for git repositories
 

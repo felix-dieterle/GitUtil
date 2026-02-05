@@ -12,7 +12,7 @@ GitUtil Mobile is a touch-optimized web interface for managing git repositories 
 2. **Install required packages** in Termux:
    ```bash
    pkg update
-   pkg install git bash
+   pkg install git bash python
    ```
 
 3. **Grant storage permission** (if needed):
@@ -38,8 +38,11 @@ GitUtil Mobile is a touch-optimized web interface for managing git repositories 
 
 The launcher will:
 - Create wrapper scripts automatically
-- Display the path to the HTML interface
-- Attempt to open it in your browser
+- Start the Python bridge server (localhost:8765)
+- Open the interface in your browser
+- Keep running until you press Ctrl+C
+
+**Important:** Keep the terminal open while using the interface. The bridge server must be running for the UI to execute git operations.
 
 ## Using the Interface
 
@@ -87,13 +90,16 @@ Once validated, you'll see:
 
 ## Tips & Tricks
 
-### Bookmark for Quick Access
-After the first launch, bookmark the `touch-ui.html` file:
+### Access URL
+After the first launch, you can access the interface at:
 ```
-file:///data/data/com.termux/files/home/gitutil-mobile-*/mobile/touch-ui.html
+http://localhost:8765
 ```
 
-Then you can access GitUtil Mobile directly without running the launcher script.
+Make sure the bridge server is running (via `launch-mobile.sh`) before opening this URL.
+
+### Stopping the Server
+Press Ctrl+C in the terminal where you ran `launch-mobile.sh` to stop the bridge server.
 
 ### Finding Repository Paths
 
@@ -137,16 +143,19 @@ git clone https://github.com/user/repo.git
 - Double-check the path is correct (use `pwd` in the repo directory)
 - Make sure the directory contains a `.git` folder
 - Verify git is installed: `which git`
+- Ensure the bridge server is running
 
 ### Interface doesn't load
-- Check that `mobile/touch-ui.html` exists
-- Try opening the file manually in your browser
-- Make sure you extracted the full package
+- Check that the bridge server is running
+- Verify Python 3 is installed: `python3 --version`
+- Try accessing http://localhost:8765 directly
+- Check for port conflicts (another service using 8765)
 
-### Wrapper scripts not working
-- Re-run `bash mobile/launch-mobile.sh` to regenerate them
-- Check that the `scripts/` directory is present
-- Verify bash is installed: `which bash`
+### Wrapper execution fails
+- Make sure the bridge server is running
+- Check that wrappers exist in `mobile/wrappers/`
+- Verify wrapper permissions: `ls -la mobile/wrappers/`
+- Check server output for error messages
 
 ### Browser compatibility
 - The interface works with any modern Android browser

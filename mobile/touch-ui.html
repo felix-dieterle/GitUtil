@@ -92,7 +92,7 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 <div class="widget-shell">
 <header class="masthead">
 <h1>GitUtil Mobile</h1>
-<p>Branch snapshot manager for Android</p>
+<p>Git commit browser and rollback tool</p>
 </header>
 <main class="canvas">
 <div id="locationPicker" class="view-mode">
@@ -154,28 +154,21 @@ if(btn.dataset.orig)btn.innerHTML=btn.dataset.orig;
 }
 };
 const callWrapper=async(wrapperName,args=[])=>{
-const wrapperPath=`${window.location.href.replace('touch-ui.html','wrappers/')}${wrapperName}.sh`;
-const cmdLine=[wrapperPath,...args].join(' ');
-const result=await new Promise((res)=>{
-const iframe=document.createElement('iframe');
-iframe.style.display='none';
-iframe.src=`data:text/html,<script>
 try{
-const exec=require('child_process').execSync;
-const out=exec('${cmdLine.replace(/'/g,"\\'")}',{encoding:'utf8'});
-parent.postMessage({success:true,output:out},'*');
-}catch(e){
-parent.postMessage({success:false,output:e.message},'*');
-}
-<\/script>`;
-document.body.appendChild(iframe);
-window.addEventListener('message',(e)=>{
-res(e.data);
-iframe.remove();
-},{once:true});
-setTimeout(()=>res({success:false,output:'Timeout'}),10000);
+const response=await fetch('http://localhost:8765/exec-wrapper',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({wrapper:wrapperName,args:args})
 });
+if(!response.ok){
+throw new Error(`Server error: ${response.status}`);
+}
+const result=await response.json();
 return result;
+}catch(err){
+console.error('Wrapper execution failed:',err);
+return{success:false,output:`Connection failed: ${err.message}`};
+}
 };
 const parseSnapshots=(raw)=>{
 const blocks=raw.split('SNAPSHOT_BEGIN').filter(b=>b.trim());

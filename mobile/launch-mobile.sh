@@ -1,10 +1,11 @@
 #!/bin/bash
 # GitUtil Mobile Launcher - Termux Edition
-# Launches web interface using wrapper scripts
+# Launches wrapper bridge server and web interface
 
 MOBILE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER_DIR="${MOBILE_ROOT}/wrappers"
 UI_FILE="${MOBILE_ROOT}/touch-ui.html"
+BRIDGE_SCRIPT="${MOBILE_ROOT}/wrapper-bridge.py"
 
 echo "🚀 GitUtil Mobile - Android Edition"
 echo "===================================="
@@ -66,20 +67,47 @@ chmod +x "${WRAPPER_DIR}"/*.sh
 
 echo "✓ Wrappers generated"
 echo ""
-echo "Opening interface..."
-echo "Wrapper location: ${WRAPPER_DIR}"
-echo ""
 
-# Check for browser
-if command -v termux-open-url &> /dev/null; then
-    termux-open-url "file://${UI_FILE}"
-elif command -v xdg-open &> /dev/null; then
-    xdg-open "${UI_FILE}"
+# Start the bridge server
+if command -v python3 &> /dev/null; then
+    echo "Starting wrapper bridge server..."
+    python3 "${BRIDGE_SCRIPT}" &
+    BRIDGE_PID=$!
+    echo "✓ Bridge server running (PID: ${BRIDGE_PID})"
+    sleep 2
+    
+    # Save PID for later cleanup
+    echo "${BRIDGE_PID}" > "${MOBILE_ROOT}/.bridge.pid"
+    
+    echo ""
+    echo "📱 Opening mobile interface..."
+    echo ""
+    
+    # Check for browser
+    if command -v termux-open-url &> /dev/null; then
+        termux-open-url "http://localhost:8765"
+    elif command -v xdg-open &> /dev/null; then
+        xdg-open "http://localhost:8765"
+    else
+        echo "📱 Manual step required:"
+        echo "   Open this URL in your browser:"
+        echo "   http://localhost:8765"
+    fi
+    
+    echo ""
+    echo "💡 Tip: Keep this terminal open while using the interface"
+    echo "   Press Ctrl+C to stop the server"
+    echo ""
+    
+    # Wait for interrupt
+    trap "kill ${BRIDGE_PID} 2>/dev/null; rm -f ${MOBILE_ROOT}/.bridge.pid; echo ''; echo 'Server stopped.'; exit 0" INT TERM
+    wait ${BRIDGE_PID}
 else
-    echo "📱 Manual step required:"
-    echo "   Open this file in your browser:"
+    echo "❌ Python 3 not found"
+    echo "   Install with: pkg install python"
+    echo ""
+    echo "📱 Fallback: Open this file directly in your browser:"
     echo "   ${UI_FILE}"
+    echo "   (Note: You'll need to run the bridge server separately)"
 fi
 
-echo ""
-echo "💡 Tip: Bookmark this page for quick access"
