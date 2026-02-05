@@ -23,6 +23,11 @@ FAILED_TEST_FILES=0
 
 # Find and run all test scripts
 for test_file in "$SCRIPT_DIR"/test_*.sh; do
+    # Skip test_helpers.sh
+    if [[ "$(basename "$test_file")" == "test_helpers.sh" ]]; then
+        continue
+    fi
+    
     if [ -f "$test_file" ]; then
         TOTAL_TEST_FILES=$((TOTAL_TEST_FILES + 1))
         

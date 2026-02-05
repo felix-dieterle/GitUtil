@@ -5,71 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 FETCH_SCRIPT="$REPO_ROOT/scripts/fetch_commits.sh"
 
-# Test counters
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-# Test helper functions
-assert_success() {
-    local test_name="$1"
-    local command="$2"
-    
-    TESTS_RUN=$((TESTS_RUN + 1))
-    
-    if eval "$command" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} PASS: $test_name"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        return 0
-    else
-        echo -e "${RED}✗${NC} FAIL: $test_name"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-        return 1
-    fi
-}
-
-assert_failure() {
-    local test_name="$1"
-    local command="$2"
-    
-    TESTS_RUN=$((TESTS_RUN + 1))
-    
-    if ! eval "$command" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} PASS: $test_name"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        return 0
-    else
-        echo -e "${RED}✗${NC} FAIL: $test_name"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-        return 1
-    fi
-}
-
-assert_output_contains() {
-    local test_name="$1"
-    local command="$2"
-    local expected="$3"
-    
-    TESTS_RUN=$((TESTS_RUN + 1))
-    
-    local output
-    output=$(eval "$command" 2>&1)
-    
-    if echo "$output" | grep -q "$expected"; then
-        echo -e "${GREEN}✓${NC} PASS: $test_name"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-        return 0
-    else
-        echo -e "${RED}✗${NC} FAIL: $test_name (expected to find '$expected')"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-        return 1
-    fi
-}
+# Source shared test helpers
+source "$SCRIPT_DIR/test_helpers.sh"
 
 # Setup
 setup() {
@@ -175,23 +112,6 @@ cd - > /dev/null
 
 teardown
 
-# Print summary
-echo ""
-echo "========================"
-echo "Test Summary"
-echo "========================"
-echo "Tests run:    $TESTS_RUN"
-echo -e "Tests passed: ${GREEN}$TESTS_PASSED${NC}"
-if [ $TESTS_FAILED -gt 0 ]; then
-    echo -e "Tests failed: ${RED}$TESTS_FAILED${NC}"
-else
-    echo -e "Tests failed: $TESTS_FAILED"
-fi
-echo ""
-
-# Exit with failure if any tests failed
-if [ $TESTS_FAILED -gt 0 ]; then
-    exit 1
-else
-    exit 0
-fi
+# Print summary and exit
+print_test_summary
+exit $?
