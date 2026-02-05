@@ -1,0 +1,28 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Make test scripts executable
+      run: chmod +x tests/*.sh
+      
+    - name: Run test suite
+      run: ./tests/run_tests.sh
+      
+    - name: Test Summary
+      if: always()
+      run: |
+        if [ -f test-results.txt ]; then
+          cat test-results.txt
+        fi
