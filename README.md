@@ -4,16 +4,21 @@
 
 An Android application for visually navigating git commit history and reverting branches to previous states.
 
+**Now with an interactive terminal UI!** Use `./gitutil.sh` to access all features through a user-friendly command-line interface.
+
 ## Features
 
+- **Interactive Terminal UI** - User-friendly menu-based interface for all git operations
 - Browse git repositories on device
 - View commit timeline with full details (hash, author, timestamp, message)
-- Revert branch to any historical commit with one tap
-- Simple, intuitive interface
+- Revert branch to any historical commit with one tap (or menu selection)
+- Simple, intuitive interface with color-coded feedback
+- Safe operations with confirmation prompts for destructive actions
 
 ## Project Structure
 
 This app uses a custom lightweight architecture:
+- `gitutil.sh` - Interactive terminal UI (main user interface)
 - `scripts/` - Shell scripts for core git operations
   - `validate_repo.sh` - Validates git repositories
   - `fetch_commits.sh` - Extracts commit history
@@ -26,6 +31,33 @@ This app uses a custom lightweight architecture:
 Standard Android build process applies. See build configuration files for dependencies.
 
 ## Usage
+
+### Interactive Terminal UI (Recommended)
+
+The easiest way to use GitUtil is through the interactive terminal interface:
+
+```bash
+# Launch the interactive UI
+./gitutil.sh
+
+# Or specify a repository path directly
+./gitutil.sh /path/to/your/repo
+```
+
+The interactive UI provides:
+- **Menu-based navigation** - Simple numbered options
+- **Repository browser** - Select and validate git repositories
+- **Commit timeline** - View commit history with full details
+- **Safe branch revert** - Confirmation prompts before destructive operations
+- **Color-coded output** - Visual feedback with success/warning/info messages
+
+#### UI Features:
+1. **Select repository** - Browse and validate git repositories on your system
+2. **View commit history** - See all commits with hash, author, timestamp, and message
+3. **Revert branch to commit** - Safely reset your branch to any previous commit
+4. **Exit** - Close the application
+
+### Android App (Coming Soon)
 
 1. Launch app
 2. Select or enter git repository path
