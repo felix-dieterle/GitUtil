@@ -87,6 +87,8 @@ if echo "$OUTPUT" | grep -q "GitUtil"; then
     pass_test "UI launches successfully"
 else
     fail_test "UI launches successfully" "UI failed to launch"
+    echo "  DEBUG: OUTPUT length: ${#OUTPUT} chars" >&2
+    echo "  DEBUG: First 200 chars: ${OUTPUT:0:200}" >&2
 fi
 
 # Test 4: Test menu display
@@ -94,6 +96,7 @@ if echo "$OUTPUT" | grep -q "Main Menu"; then
     pass_test "Main menu is displayed"
 else
     fail_test "Main menu is displayed" "Main menu not found"
+    echo "  DEBUG: Searching for 'Main Menu' in output" >&2
 fi
 
 # Test 5: Test repository validation
@@ -110,6 +113,8 @@ if echo "$OUTPUT" | grep -q "Commit History" && echo "$OUTPUT" | grep -q "commit
     pass_test "Commit history display works"
 else
     fail_test "Commit history display works" "Commit history not displayed"
+    echo "  DEBUG: Has 'Commit History': $(echo "$OUTPUT" | grep -c "Commit History" || echo 0)" >&2
+    echo "  DEBUG: Has 'commit': $(echo "$OUTPUT" | grep -c "commit" || echo 0)" >&2
 fi
 
 # Test 7: Test invalid repository handling
@@ -120,6 +125,8 @@ if echo "$OUTPUT" | grep -qi "invalid\|not exist\|not a git"; then
     pass_test "Invalid repository is detected"
 else
     fail_test "Invalid repository is detected" "Invalid repo not detected"
+    echo "  DEBUG: Checked path: $INVALID_REPO" >&2
+    echo "  DEBUG: Output contains 'Invalid': $(echo "$OUTPUT" | grep -c -i "invalid" || echo 0)" >&2
 fi
 rm -rf "$INVALID_REPO"
 
@@ -140,6 +147,11 @@ if echo "$OUTPUT" | grep -q "Select repository" && \
     pass_test "All menu options are present"
 else
     fail_test "All menu options are present" "Some menu options missing"
+    echo "  DEBUG: Menu options found:" >&2
+    echo "    Select repository: $(echo "$OUTPUT" | grep -c "Select repository" || echo 0)" >&2
+    echo "    View commit history: $(echo "$OUTPUT" | grep -c "View commit history" || echo 0)" >&2
+    echo "    Revert branch: $(echo "$OUTPUT" | grep -c "Revert branch" || echo 0)" >&2
+    echo "    Exit: $(echo "$OUTPUT" | grep -c "Exit" || echo 0)" >&2
 fi
 
 # Test 10: Test graceful exit
@@ -148,6 +160,8 @@ if echo "$OUTPUT" | grep -q "Thank you"; then
     pass_test "Graceful exit message displayed"
 else
     fail_test "Graceful exit message displayed" "Exit message not found"
+    echo "  DEBUG: Exit message search failed" >&2
+    echo "  DEBUG: Last 100 chars: ${OUTPUT: -100}" >&2
 fi
 
 # Cleanup
