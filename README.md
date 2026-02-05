@@ -1,5 +1,7 @@
 # GitUtil - Git Branch Rewind Tool
 
+[![Test Suite](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml/badge.svg)](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml)
+
 An Android application for visually navigating git commit history and reverting branches to previous states.
 
 ## Features
@@ -33,10 +35,10 @@ Standard Android build process applies. See build configuration files for depend
 
 ## Testing
 
-The project includes a comprehensive test suite for all shell scripts:
+The project includes a comprehensive test suite for all shell scripts. Tests run automatically via GitHub Actions on every push and pull request.
 
 ```bash
-# Run all tests
+# Run all tests locally
 ./tests/run_tests.sh
 
 # Run individual test files
@@ -46,6 +48,14 @@ The project includes a comprehensive test suite for all shell scripts:
 ```
 
 See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Continuous Integration
+
+Tests are automatically run on:
+- Every push to `main` or `master` branches
+- Every pull request targeting `main` or `master`
+
+The CI workflow runs all 30 tests and reports results. Check the [Actions tab](https://github.com/felix-dieterle/GitUtil/actions) for test results.
 
 ## Requirements
 
