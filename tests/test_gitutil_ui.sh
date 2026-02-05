@@ -82,7 +82,7 @@ fi
 TEST_REPO=$(mktemp -d)
 setup_test_repo "$TEST_REPO"
 
-OUTPUT=$(printf "4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "GitUtil"; then
     pass_test "UI launches successfully"
 else
@@ -124,7 +124,7 @@ fi
 rm -rf "$INVALID_REPO"
 
 # Test 8: Test color output is present (without stripping)
-OUTPUT=$(printf "4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 || true)
 if echo "$OUTPUT" | grep -q $'\033\['; then
     pass_test "Color codes are present in output"
 else
