@@ -82,7 +82,7 @@ fi
 TEST_REPO=$(mktemp -d)
 setup_test_repo "$TEST_REPO"
 
-OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "GitUtil"; then
     pass_test "UI launches successfully"
 else
@@ -97,7 +97,7 @@ else
 fi
 
 # Test 5: Test repository validation
-OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Valid git repository"; then
     pass_test "Repository validation works"
 else
@@ -105,7 +105,7 @@ else
 fi
 
 # Test 6: Test commit history can be fetched (via menu option 2)
-OUTPUT=$(printf "\n2\n\n4\n" | timeout 10 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n2\n\n4\n" | timeout 10 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Commit History" && echo "$OUTPUT" | grep -q "commit"; then
     pass_test "Commit history display works"
 else
@@ -115,7 +115,7 @@ fi
 # Test 7: Test invalid repository handling
 INVALID_REPO=$(mktemp -d)
 
-OUTPUT=$(printf "1\n$INVALID_REPO\n\n4\n" | timeout 5 "$GITUTIL" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "1\n$INVALID_REPO\n\n4\n" | timeout 5 bash "$GITUTIL" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -qi "invalid\|not exist\|not a git"; then
     pass_test "Invalid repository is detected"
 else
@@ -124,7 +124,7 @@ fi
 rm -rf "$INVALID_REPO"
 
 # Test 8: Test color output is present (without stripping)
-OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 || true)
 if echo "$OUTPUT" | grep -q $'\033\['; then
     pass_test "Color codes are present in output"
 else
@@ -132,7 +132,7 @@ else
 fi
 
 # Test 9: Test all menu options are present
-OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Select repository" && \
    echo "$OUTPUT" | grep -q "View commit history" && \
    echo "$OUTPUT" | grep -q "Revert branch" && \
@@ -143,7 +143,7 @@ else
 fi
 
 # Test 10: Test graceful exit
-OUTPUT=$(printf "\n4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Thank you"; then
     pass_test "Graceful exit message displayed"
 else
