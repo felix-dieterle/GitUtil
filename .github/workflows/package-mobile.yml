@@ -40,7 +40,7 @@ jobs:
           --------------------
           1. Install Termux from F-Droid
           2. Install required packages:
-             pkg install git bash
+             pkg install git bash python
           
           3. Extract this package to your device:
              unzip gitutil-mobile-*.zip
@@ -49,7 +49,8 @@ jobs:
           4. Launch the mobile interface:
              bash mobile/launch-mobile.sh
           
-          5. Open the displayed file path in your browser
+          5. The interface will open at http://localhost:8765
+             Keep the terminal open while using the interface
           
           Usage:
           ------
@@ -60,9 +61,10 @@ jobs:
           
           Tips:
           -----
-          - Bookmark the touch-ui.html file for quick access
+          - Bookmark http://localhost:8765 for quick access
           - The interface remembers your last repository path
-          - All operations use the existing shell scripts
+          - Keep the terminal running (bridge server must be active)
+          - Press Ctrl+C in the terminal to stop the server
           
           Support:
           --------
@@ -108,11 +110,13 @@ jobs:
             **Installation:**
             1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.zip`
             2. Extract on your Android device
-            3. Follow instructions in `INSTALL.txt`
+            3. Run: `pkg install git bash python` (in Termux)
+            4. Run: `bash mobile/launch-mobile.sh`
+            5. Access at http://localhost:8765
             
             **Requirements:**
             - Android device with Termux installed
-            - Git and Bash packages in Termux
+            - Git, Bash, and Python 3 packages
             - Web browser
             
             See the included README.md for complete documentation.
