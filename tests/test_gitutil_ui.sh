@@ -79,7 +79,7 @@ else
 fi
 
 # Test 3: Test basic invocation (exit immediately)
-TEST_REPO="/tmp/test-gitutil-$$"
+TEST_REPO=$(mktemp -d)
 setup_test_repo "$TEST_REPO"
 
 OUTPUT=$(printf "4\n" | timeout 5 "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
@@ -113,8 +113,7 @@ else
 fi
 
 # Test 7: Test invalid repository handling
-INVALID_REPO="/tmp/invalid-repo-$$"
-mkdir -p "$INVALID_REPO"
+INVALID_REPO=$(mktemp -d)
 
 OUTPUT=$(printf "1\n$INVALID_REPO\n\n4\n" | timeout 5 "$GITUTIL" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -qi "invalid\|not exist\|not a git"; then

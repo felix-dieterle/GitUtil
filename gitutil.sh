@@ -39,6 +39,18 @@ print_info() {
     echo -e "${CYAN}ℹ $1${NC}"
 }
 
+# Format timestamp for display
+format_timestamp() {
+    local timestamp="$1"
+    date -d "@$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+    date -r "$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || \
+    echo "$timestamp"
+}
+
+# Arrays to store commit information (indexed by commit number)
+declare -a COMMIT_HASHES
+declare -a COMMIT_SUBJECTS
+
 # Clear screen and show header
 show_main_header() {
     clear
@@ -97,13 +109,15 @@ show_commits() {
     
     print_info "Fetching commit history..."
     
-    commits_raw=$("$SCRIPTS_PATH/fetch_commits.sh" "$repo_path" 2>&1)
-    
-    if [ $? -ne 0 ]; then
+    if ! commits_raw=$("$SCRIPTS_PATH/fetch_commits.sh" "$repo_path" 2>&1); then
         print_error "Failed to fetch commits"
         COMMIT_COUNT=0
         return 1
     fi
+    
+    # Clear previous commit data
+    COMMIT_HASHES=()
+    COMMIT_SUBJECTS=()
     
     # Parse and display commits
     echo -e "\n${BOLD}${CYAN}Commit History:${NC}\n"
@@ -122,7 +136,7 @@ show_commits() {
                 
                 # Convert timestamp to readable date
                 local date_str
-                date_str=$(date -d "@$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "$timestamp" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$timestamp")
+                date_str=$(format_timestamp "$timestamp")
                 
                 # Display commit
                 echo -e "${BOLD}${YELLOW}[$count]${NC} ${GREEN}${hash:0:8}${NC}"
@@ -131,9 +145,9 @@ show_commits() {
                 echo -e "    ${BOLD}Msg:${NC}    $subject"
                 echo ""
                 
-                # Store commit info for later selection (global variables)
-                eval "COMMIT_${count}_HASH=\"$hash\""
-                eval "COMMIT_${count}_SUBJECT=\"$subject\""
+                # Store commit info for later selection (using arrays)
+                COMMIT_HASHES[$count]="$hash"
+                COMMIT_SUBJECTS[$count]="$subject"
             fi
             in_commit=false
         elif [ "$in_commit" = true ]; then
@@ -275,11 +289,18 @@ show_menu() {
                     continue
                 fi
                 
+                # Validate input is a number
+                if ! [[ "$commit_num" =~ ^[0-9]+$ ]]; then
+                    print_error "Invalid input. Please enter a number."
+                    echo ""
+                    echo "Press Enter to continue..."
+                    read -r
+                    continue
+                fi
+                
                 if [ "$commit_num" -ge 1 ] && [ "$commit_num" -le "$COMMIT_COUNT" ]; then
-                    local hash_var="COMMIT_${commit_num}_HASH"
-                    local subject_var="COMMIT_${commit_num}_SUBJECT"
-                    local selected_hash="${!hash_var}"
-                    local selected_subject="${!subject_var}"
+                    local selected_hash="${COMMIT_HASHES[$commit_num]}"
+                    local selected_subject="${COMMIT_SUBJECTS[$commit_num]}"
                     
                     echo ""
                     revert_to_commit "$repo_path" "$selected_hash" "$selected_subject"
