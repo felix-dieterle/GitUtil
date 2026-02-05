@@ -53,7 +53,12 @@ declare -a COMMIT_SUBJECTS
 
 # Clear screen and show header
 show_main_header() {
-    clear
+    # Clear screen if TERM is set, otherwise just add some newlines
+    if [ -n "$TERM" ] && [ "$TERM" != "dumb" ]; then
+        clear 2>/dev/null || echo -e "\n\n\n"
+    else
+        echo -e "\n\n\n"
+    fi
     print_header "GitUtil - Git Branch Rewind Tool"
     echo -e "${BOLD}Version 1.0${NC}\n"
 }
