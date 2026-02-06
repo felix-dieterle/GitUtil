@@ -168,6 +168,13 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 ## Requirements
 
 ### For Mobile Interface (Android)
+
+**For APK Users:**
+- Android 7.0 (API 24) or higher
+- Enable "Install from Unknown Sources" in settings
+- The APK will guide you through the rest of the setup
+
+**For Manual Installation:**
 - Android device with Termux installed
 - Git, Bash, and Python 3 packages (`pkg install git bash python`)
 - Web browser (any Android browser)
