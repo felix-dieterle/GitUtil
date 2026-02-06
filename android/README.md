@@ -78,7 +78,7 @@ For production releases, the APK should be signed. GitHub Actions can automatica
 - `KEY_STORE_PASSWORD` - Keystore password
 - `KEY_PASSWORD` - Key password
 
-If these secrets are not configured, an unsigned APK will be built instead.
+If these secrets are not configured, the APK will be signed with the Android debug keystore, which allows it to be installed on devices for testing purposes. For production releases, it's recommended to configure the production signing secrets.
 
 ## Modifying the App
 
