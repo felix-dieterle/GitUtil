@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GitUtil Mobile</string>
+    <string name="app_subtitle">Git Repository Manager for Android</string>
+    
+    <string name="info_text">GitUtil provides a touch-optimized web interface for managing git repositories on Android devices via Termux.\n\nFeatures:\n• Browse commit history\n• Rollback branches to any commit\n• Touch-friendly interface\n• Works offline</string>
+    
+    <string name="installation_steps">Installation Steps:</string>
+    
+    <string name="step1_install_termux">1. Install Termux from F-Droid</string>
+    <string name="step2_download_package">2. Download GitUtil Package</string>
+    <string name="step3_view_docs">3. View Setup Instructions</string>
+    
+    <string name="requirements_text">Requirements:\n• Termux (from F-Droid only)\n• Git, Bash, and Python 3\n• Web browser\n\nInstall packages in Termux:\npkg install git bash python</string>
+</resources>

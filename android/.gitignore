@@ -1,0 +1,34 @@
+# Android build files
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# APK files (keep in releases)
+*.apk
+*.aab
+
+# Keystore files (never commit!)
+*.jks
+*.keystore
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# NDK
+obj/
