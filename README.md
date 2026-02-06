@@ -2,39 +2,97 @@
 
 [![Test Suite](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml/badge.svg)](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml)
 
-An Android application for visually navigating git commit history and reverting branches to previous states.
+A cross-platform git repository manager with **mobile web interface for Android** and interactive terminal UI.
 
-**Now with an interactive terminal UI!** Use `./gitutil.sh` to access all features through a user-friendly command-line interface.
+GitUtil provides shell-based tools for navigating commit history and reverting branches, with two user interfaces:
+- **Mobile Web UI** - Touch-optimized interface for Android devices (Termux)
+- **Terminal UI** - Interactive command-line interface for desktop/server use
 
 ## Features
 
-- **Interactive Terminal UI** - User-friendly menu-based interface for all git operations
-- Browse git repositories on device
-- View commit timeline with full details (hash, author, timestamp, message)
-- Revert branch to any historical commit with one tap (or menu selection)
-- Simple, intuitive interface with color-coded feedback
-- Safe operations with confirmation prompts for destructive actions
+### Mobile Web Interface (Android/Termux)
+- **Touch-optimized design** - Large buttons and responsive layout for mobile screens
+- **Self-contained HTML** - Works offline, no internet required
+- **Visual commit browser** - Scroll through commit history with full details
+- **One-tap rollback** - Select any snapshot and reset your branch
+- **Path memory** - Remembers your last repository location
+- **Safe operations** - Confirmation dialogs before destructive actions
+
+### Terminal Interface (Desktop/Server)
+- **Interactive menus** - User-friendly numbered options
+- **Repository browser** - Select and validate git repositories
+- **Color-coded output** - Visual feedback for success/warning/info messages
+- **Full commit details** - View hash, author, timestamp, and message
+
+### Core Features
+- Browse git repositories on any device
+- View complete commit timeline
+- Revert branch to any historical commit
+- Safe operations with confirmation prompts
 
 ## Project Structure
 
-This app uses a custom lightweight architecture:
-- `gitutil.sh` - Interactive terminal UI (main user interface)
-- `scripts/` - Shell scripts for core git operations
+This project uses a lightweight shell-based architecture:
+- `gitutil.sh` - Interactive terminal UI (desktop/server interface)
+- `mobile/` - **Mobile web interface for Android**
+  - `touch-ui.html` - Mobile-optimized HTML interface
+  - `launch-mobile.sh` - Launcher script for Termux
+  - `wrappers/` - Shell script wrappers (auto-generated)
+- `scripts/` - Core git operation shell scripts
   - `validate_repo.sh` - Validates git repositories
   - `fetch_commits.sh` - Extracts commit history
   - `revert_branch.sh` - Reverts branch to specific commit
 - `tests/` - Comprehensive test suite for all scripts
 - `docs/` - Architecture and integration documentation
 
-## Building
+## Installation & Usage
 
-Standard Android build process applies. See build configuration files for dependencies.
+### Mobile Interface (Android/Termux)
 
-## Usage
+**Prerequisites:**
+1. Install [Termux](https://f-droid.org/en/packages/com.termux/) from F-Droid
+2. Install required packages:
+   ```bash
+   pkg install git bash python
+   ```
 
-### Interactive Terminal UI (Recommended)
+**Quick Start:**
+```bash
+# Download and extract GitUtil
+unzip gitutil-mobile-*.zip
+cd gitutil-mobile-*
 
-The easiest way to use GitUtil is through the interactive terminal interface:
+# Launch the mobile interface
+bash mobile/launch-mobile.sh
+```
+
+The launcher will:
+- Generate wrapper scripts automatically
+- Start the bridge server on localhost:8765
+- Open the interface in your browser
+
+**Using the Mobile Interface:**
+1. Enter your git repository path (e.g., `/sdcard/repos/my-project`)
+2. Tap "Verify Location" to validate and load the repository
+3. Browse through commit snapshots in the timeline
+4. Tap a snapshot to select it
+5. Tap "Apply Rollback" to reset your branch to that snapshot
+6. Confirm the operation when prompted
+
+**Important Notes:**
+- Keep the terminal open - the bridge server must run while using the interface
+- Press Ctrl+C to stop the server when done
+- The interface connects to http://localhost:8765
+
+**Tips:**
+- Bookmark http://localhost:8765 for quick access
+- The interface remembers your last repository path
+- Works with any git repository on your device
+- The bridge server provides secure localhost-only access
+
+### Terminal Interface (Desktop/Server)
+
+The easiest way to use GitUtil on desktop/server is through the interactive terminal interface:
 
 ```bash
 # Launch the interactive UI
@@ -57,13 +115,20 @@ The interactive UI provides:
 3. **Revert branch to commit** - Safely reset your branch to any previous commit
 4. **Exit** - Close the application
 
-### Android App (Coming Soon)
+### Direct Script Usage
 
-1. Launch app
-2. Select or enter git repository path
-3. Browse commit timeline (newest to oldest)
-4. Tap any commit to see details
-5. Confirm revert action to reset branch
+You can also call the scripts directly:
+
+```bash
+# Validate a repository
+./scripts/validate_repo.sh /path/to/repo
+
+# Fetch commit history
+./scripts/fetch_commits.sh /path/to/repo
+
+# Revert to a specific commit
+./scripts/revert_branch.sh /path/to/repo <commit-hash>
+```
 
 ## Testing
 
@@ -91,6 +156,13 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 
 ## Requirements
 
-- Android 8.0 (API 26) or higher
-- Git repositories must be accessible on device storage
-- Bash shell for running scripts and tests
+### For Mobile Interface (Android)
+- Android device with Termux installed
+- Git, Bash, and Python 3 packages (`pkg install git bash python`)
+- Web browser (any Android browser)
+- Storage access for git repositories
+
+### For Terminal Interface (Desktop/Server)
+- Bash shell (version 4.0 or higher)
+- Git command-line tools
+- Terminal with color support (recommended)
