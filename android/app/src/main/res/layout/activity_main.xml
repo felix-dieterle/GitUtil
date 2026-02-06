@@ -59,6 +59,18 @@
 
         </androidx.cardview.widget.CardView>
 
+        <!-- Step 0: Launch App -->
+        <Button
+            android:id="@+id/launchAppButton"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginBottom="24dp"
+            android:text="@string/launch_gitutil"
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            style="@style/Widget.Material3.Button" />
+
         <!-- Installation Steps -->
         <TextView
             android:layout_width="wrap_content"
