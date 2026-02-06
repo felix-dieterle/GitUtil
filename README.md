@@ -49,7 +49,17 @@ This project uses a lightweight shell-based architecture:
 
 ### Mobile Interface (Android/Termux)
 
-**Option 1: Easy Install (Recommended)**
+**Option 1: Standalone APK (Recommended - No Dependencies Required)**
+
+1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
+2. Open the app and tap "Launch GitUtil"
+3. Grant storage permission when prompted
+4. Enter your git repository path (e.g., `/sdcard/repos/my-project`)
+5. Browse commits and rollback as needed
+
+**The APK now includes built-in git support using JGit - no Termux, Python, or external dependencies required!**
+
+**Option 2: Easy Install (Classic - Via Termux)**
 
 1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
 2. Open the app and follow the on-screen installation guide
@@ -58,7 +68,7 @@ This project uses a lightweight shell-based architecture:
    - Download the GitUtil package
    - Access setup documentation
 
-**Option 2: Manual Installation**
+**Option 3: Manual Installation (Termux)**
 
 **Prerequisites:**
 1. Install [Termux](https://f-droid.org/en/packages/com.termux/) from F-Droid
@@ -169,7 +179,13 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 
 ### For Mobile Interface (Android)
 
-**For APK Users:**
+**For Standalone APK (No Dependencies):**
+- Android 7.0 (API 24) or higher
+- Storage permission (granted when you first launch the app)
+- About 10 MB of storage space
+- That's it! No Termux, Python, or Git installation required
+
+**For APK Users (Classic Termux Setup):**
 - Android 7.0 (API 24) or higher
 - Enable installation from unknown sources:
   - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
