@@ -46,26 +46,28 @@ public class GitBridge {
         }
     }
 
-    private String checkLocation(String path) {
-        try {
-            File gitDir = new File(path, ".git");
-            if (!gitDir.exists() || !gitDir.isDirectory()) {
-                // Try the path itself as a .git directory
-                gitDir = new File(path);
-            }
+    /**
+     * Helper method to open a git repository
+     * Reduces code duplication and ensures consistent error handling
+     */
+    private Repository openRepository(String path) throws Exception {
+        File gitDir = new File(path, ".git");
+        if (!gitDir.exists() || !gitDir.isDirectory()) {
+            gitDir = new File(path);
+        }
 
-            FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            Repository repository = builder
-                .setGitDir(gitDir.getName().equals(".git") ? gitDir : new File(path, ".git"))
-                .readEnvironment()
-                .findGitDir()
-                .build();
-            
+        return new FileRepositoryBuilder()
+            .setGitDir(gitDir.getName().equals(".git") ? gitDir : new File(path, ".git"))
+            .readEnvironment()
+            .findGitDir()
+            .build();
+    }
+
+    private String checkLocation(String path) {
+        try (Repository repository = openRepository(path)) {
             if (repository.getObjectDatabase().exists()) {
-                repository.close();
                 return createSuccessResponse("LOCATION_VALID\n");
             } else {
-                repository.close();
                 return createErrorResponse("LOCATION_INVALID\n");
             }
         } catch (Exception e) {
@@ -75,19 +77,7 @@ public class GitBridge {
     }
 
     private String pullTimeline(String path) {
-        try {
-            File gitDir = new File(path, ".git");
-            if (!gitDir.exists() || !gitDir.isDirectory()) {
-                gitDir = new File(path);
-            }
-
-            FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            Repository repository = builder
-                .setGitDir(gitDir.getName().equals(".git") ? gitDir : new File(path, ".git"))
-                .readEnvironment()
-                .findGitDir()
-                .build();
-
+        try (Repository repository = openRepository(path)) {
             StringBuilder output = new StringBuilder();
             
             try (Git git = new Git(repository)) {
@@ -103,7 +93,6 @@ public class GitBridge {
                 }
             }
             
-            repository.close();
             return createSuccessResponse(output.toString());
         } catch (Exception e) {
             Log.e(TAG, "Error pulling timeline", e);
@@ -112,23 +101,10 @@ public class GitBridge {
     }
 
     private String applyRollback(String path, String commitHash) {
-        try {
-            File gitDir = new File(path, ".git");
-            if (!gitDir.exists() || !gitDir.isDirectory()) {
-                gitDir = new File(path);
-            }
-
-            FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            Repository repository = builder
-                .setGitDir(gitDir.getName().equals(".git") ? gitDir : new File(path, ".git"))
-                .readEnvironment()
-                .findGitDir()
-                .build();
-
+        try (Repository repository = openRepository(path)) {
             try (Git git = new Git(repository)) {
                 ObjectId commitId = repository.resolve(commitHash);
                 if (commitId == null) {
-                    repository.close();
                     return createErrorResponse("ROLLBACK_FAILED\nCommit not found");
                 }
                 
@@ -137,7 +113,6 @@ public class GitBridge {
                     .setRef(commitHash)
                     .call();
                 
-                repository.close();
                 return createSuccessResponse("ROLLBACK_SUCCESS\n");
             }
         } catch (Exception e) {
