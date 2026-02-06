@@ -10,8 +10,9 @@ android {
         applicationId "com.gitutil.mobile"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        // Allow version override from gradle properties (used in CI)
+        versionCode project.hasProperty('versionCodeOverride') ? project.versionCodeOverride as Integer : 1
+        versionName project.hasProperty('versionNameOverride') ? project.versionNameOverride : "1.0.0"
     }
 
     buildTypes {

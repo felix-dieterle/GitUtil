@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
+    private AlertDialog errorDialog;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,6 +44,16 @@ public class MainActivity extends AppCompatActivity {
                 openDocumentation();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Dismiss dialog if it's showing to prevent window leak
+        if (errorDialog != null && errorDialog.isShowing()) {
+            errorDialog.dismiss();
+            errorDialog = null;
+        }
     }
 
     private void openFDroidTermux() {
@@ -75,7 +87,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
-        new AlertDialog.Builder(this)
+        // Dismiss any existing error dialog
+        if (errorDialog != null && errorDialog.isShowing()) {
+            errorDialog.dismiss();
+        }
+        
+        errorDialog = new AlertDialog.Builder(this)
                 .setTitle("Error")
                 .setMessage(message)
                 .setPositiveButton("OK", null)
