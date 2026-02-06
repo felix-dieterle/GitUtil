@@ -49,6 +49,17 @@ This project uses a lightweight shell-based architecture:
 
 ### Mobile Interface (Android/Termux)
 
+**Option 1: Easy Install (Recommended)**
+
+1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
+2. Open the app and follow the on-screen installation guide
+3. The app will help you:
+   - Install Termux from F-Droid
+   - Download the GitUtil package
+   - Access setup documentation
+
+**Option 2: Manual Installation**
+
 **Prerequisites:**
 1. Install [Termux](https://f-droid.org/en/packages/com.termux/) from F-Droid
 2. Install required packages:
