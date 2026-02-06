@@ -201,18 +201,18 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY }}
         run: |
           cd android
-          # If production keystore is provided, create it from base64
-          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
-            echo "${{ secrets.SIGNING_KEY }}" | base64 -d > app/release.keystore
-            export KEYSTORE_FILE="$PWD/app/release.keystore"
+          # If production keystore is provided, create it in a secure temporary location
+          if [ -n "$SIGNING_KEY_BASE64" ]; then
+            # Create temporary directory with restricted permissions
+            TEMP_DIR=$(mktemp -d)
+            trap "rm -rf $TEMP_DIR" EXIT
+            echo "$SIGNING_KEY_BASE64" | base64 -d > "$TEMP_DIR/release.keystore"
+            export KEYSTORE_FILE="$TEMP_DIR/release.keystore"
           fi
           ./gradlew assembleRelease --no-daemon --stacktrace
-          # Clean up keystore if it was created
-          if [ -f app/release.keystore ]; then
-            rm app/release.keystore
-          fi
       
       - name: Rename APK
         run: |
@@ -267,7 +267,9 @@ jobs:
             
             **Installation:**
             1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk`
-            2. Enable "Install from Unknown Sources" in Android settings (Settings → Security → Unknown Sources)
+            2. Enable installation from unknown sources:
+               - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
+               - **Android 7.x**: Settings → Security → Unknown Sources
             3. Open the APK file to install
             4. Follow the in-app instructions to complete setup
             
