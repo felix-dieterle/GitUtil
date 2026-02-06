@@ -15,10 +15,23 @@ android {
         versionName project.hasProperty('versionNameOverride') ? project.versionNameOverride : "1.0.0"
     }
 
+    signingConfigs {
+        release {
+            // Use debug keystore for signing when release keys are not available
+            // This allows the APK to be installed on devices even without production signing
+            storeFile file(System.getenv("KEYSTORE_FILE") ?: "${System.properties['user.home']}/.android/debug.keystore")
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "android"
+            keyAlias System.getenv("KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "android"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Sign with release config (falls back to debug key if production keys not available)
+            signingConfig signingConfigs.release
         }
     }
     

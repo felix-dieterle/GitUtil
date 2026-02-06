@@ -171,7 +171,9 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 
 **For APK Users:**
 - Android 7.0 (API 24) or higher
-- Enable "Install from Unknown Sources" in settings
+- Enable installation from unknown sources:
+  - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
+  - **Android 7.x**: Settings → Security → Unknown Sources
 - The APK will guide you through the rest of the setup
 
 **For Manual Installation:**

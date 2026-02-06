@@ -195,30 +195,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
       
-      - name: Build APK
+      - name: Build and Sign APK
+        env:
+          # If production signing secrets are available, use them; otherwise fallback to debug keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY }}
         run: |
           cd android
+          # If production keystore is provided, create it in a secure temporary location
+          if [ -n "$SIGNING_KEY_BASE64" ]; then
+            # Create temporary directory with restricted permissions
+            TEMP_DIR=$(mktemp -d)
+            trap "rm -rf $TEMP_DIR" EXIT
+            echo "$SIGNING_KEY_BASE64" | base64 -d > "$TEMP_DIR/release.keystore"
+            export KEYSTORE_FILE="$TEMP_DIR/release.keystore"
+          fi
           ./gradlew assembleRelease --no-daemon --stacktrace
-      
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        continue-on-error: true
       
       - name: Rename APK
         run: |
           cd android/app/build/outputs/apk/release
-          if [ -f *-signed.apk ]; then
-            mv *-signed.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk
-          else
-            mv app-release-unsigned.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}-unsigned.apk
-          fi
+          mv app-release.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk
       
       - name: Generate APK checksum
         run: |
@@ -267,8 +266,10 @@ jobs:
             - Beautiful Material Design interface
             
             **Installation:**
-            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk` (or unsigned version)
-            2. Enable "Install from Unknown Sources" in Android settings
+            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk`
+            2. Enable installation from unknown sources:
+               - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
+               - **Android 7.x**: Settings → Security → Unknown Sources
             3. Open the APK file to install
             4. Follow the in-app instructions to complete setup
             
