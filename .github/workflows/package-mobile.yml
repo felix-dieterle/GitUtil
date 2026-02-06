@@ -195,30 +195,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
       
-      - name: Build APK
+      - name: Build and Sign APK
+        env:
+          # If production signing secrets are available, use them; otherwise fallback to debug keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          # If production keystore is provided, create it from base64
+          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
+            echo "${{ secrets.SIGNING_KEY }}" | base64 -d > app/release.keystore
+            export KEYSTORE_FILE="$PWD/app/release.keystore"
+          fi
           ./gradlew assembleRelease --no-daemon --stacktrace
-      
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        continue-on-error: true
+          # Clean up keystore if it was created
+          if [ -f app/release.keystore ]; then
+            rm app/release.keystore
+          fi
       
       - name: Rename APK
         run: |
           cd android/app/build/outputs/apk/release
-          if [ -f *-signed.apk ]; then
-            mv *-signed.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk
-          else
-            mv app-release-unsigned.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}-unsigned.apk
-          fi
+          mv app-release.apk gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk
       
       - name: Generate APK checksum
         run: |
@@ -267,8 +266,8 @@ jobs:
             - Beautiful Material Design interface
             
             **Installation:**
-            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk` (or unsigned version)
-            2. Enable "Install from Unknown Sources" in Android settings
+            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.apk`
+            2. Enable "Install from Unknown Sources" in Android settings (Settings → Security → Unknown Sources)
             3. Open the APK file to install
             4. Follow the in-app instructions to complete setup
             
