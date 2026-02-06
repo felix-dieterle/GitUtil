@@ -211,6 +211,20 @@ jobs:
             trap "rm -rf $TEMP_DIR" EXIT
             echo "$SIGNING_KEY_BASE64" | base64 -d > "$TEMP_DIR/release.keystore"
             export KEYSTORE_FILE="$TEMP_DIR/release.keystore"
+          else
+            # Generate a debug keystore if production keys are not available
+            mkdir -p "$HOME/.android"
+            if [ ! -f "$HOME/.android/debug.keystore" ]; then
+              keytool -genkeypair -v \
+                -keystore "$HOME/.android/debug.keystore" \
+                -alias androiddebugkey \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -storepass android \
+                -keypass android \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
           fi
           ./gradlew assembleRelease --no-daemon --stacktrace
       
