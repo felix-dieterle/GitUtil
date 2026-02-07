@@ -149,7 +149,7 @@ test_version_code_error_scenario() {
     fi
 }
 
-# Test 6: Edge case - All components zero-padded with "problematic" digits (08 and 09)
+# Test 6: Edge case - All components zero-padded with digits invalid in octal (08 and 09)
 test_version_code_all_problematic_digits() {
     local test_name="Version code calculation with all problematic zero-padded values"
     
