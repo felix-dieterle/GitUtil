@@ -718,7 +718,7 @@ console.log('[ROLLBACK] Response success flag:', res.success);
 console.log('[ROLLBACK] Response exit code:', res.exit_code);
 console.log('[ROLLBACK] Response output:', res.output);
 console.log('[ROLLBACK] Response errors:', res.errors);
-if(res.success&&(res.output.includes('SUCCESS')||res.output.includes('ROLLBACK_SUCCESS'))){
+if(res.success&&res.output.includes('ROLLBACK_SUCCESS')){
 console.log('[ROLLBACK] ✓ Rollback completed successfully');
 console.log('[ROLLBACK] New HEAD is now at:', WidgetState.picked.substring(0,8));
 showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
@@ -742,7 +742,7 @@ if(res.errors){
 errorDetails+=res.errors;
 console.error('[ROLLBACK] Error details from stderr:', res.errors);
 }
-if(res.output&&!res.output.includes('SUCCESS')&&!res.output.includes('ROLLBACK_SUCCESS')){
+if(res.output&&!res.output.includes('ROLLBACK_SUCCESS')){
 if(errorDetails)errorDetails+='\n';
 errorDetails+=res.output;
 console.error('[ROLLBACK] Output from stdout:', res.output);
