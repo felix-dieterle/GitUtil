@@ -32,23 +32,48 @@ public class GitUtilActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Request storage permissions for accessing git repositories
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                    new String[]{
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    },
-                    PERMISSION_REQUEST_CODE);
-            } else {
-                initializeWebView();
-            }
+        // Check and request storage permissions based on Android version
+        if (!hasStoragePermission()) {
+            requestStoragePermission();
         } else {
             initializeWebView();
+        }
+    }
+    
+    /**
+     * Check if the app has the required storage permissions
+     */
+    private boolean hasStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ requires MANAGE_EXTERNAL_STORAGE
+            return Environment.isExternalStorageManager();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android 6-10 uses READ/WRITE_EXTERNAL_STORAGE
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED &&
+                   ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            // Below Android 6, permissions are granted at install time
+            return true;
+        }
+    }
+    
+    /**
+     * Request storage permissions based on Android version
+     */
+    private void requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+: Show dialog and redirect to MANAGE_EXTERNAL_STORAGE settings
+            showPermissionDeniedDialog();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android 6-10: Request READ/WRITE_EXTERNAL_STORAGE at runtime
+            ActivityCompat.requestPermissions(this,
+                new String[]{
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                },
+                PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -68,11 +93,8 @@ public class GitUtilActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         // Re-check permissions when returning from Settings
-        if (waitingForPermissionFromSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED) {
+        if (waitingForPermissionFromSettings) {
+            if (hasStoragePermission()) {
                 waitingForPermissionFromSettings = false;
                 initializeWebView();
             }
@@ -81,15 +103,31 @@ public class GitUtilActivity extends AppCompatActivity {
 
     private void showPermissionDeniedDialog() {
         waitingForPermissionFromSettings = true;
+        
+        String message;
+        Intent intent;
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+
+            message = "GitUtil needs All Files Access permission to manage git repositories. " +
+                     "Please enable \"Allow access to manage all files\" in the app settings.";
+            intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+        } else {
+            // Android 6-10
+            message = "GitUtil needs storage access to manage git repositories. " +
+                     "Please grant the Storage permission in the app settings.";
+            intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        }
+        
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        
+        final Intent settingsIntent = intent;
         new AlertDialog.Builder(this)
             .setTitle("Storage Permission Required")
-            .setMessage("GitUtil needs storage access to manage git repositories. Please grant permission in Settings.")
+            .setMessage(message)
             .setPositiveButton("Open Settings", (dialog, which) -> {
-                // Open app settings page
-                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                intent.setData(uri);
-                startActivity(intent);
+                startActivity(settingsIntent);
             })
             .setNegativeButton("Cancel", (dialog, which) -> {
                 waitingForPermissionFromSettings = false;
