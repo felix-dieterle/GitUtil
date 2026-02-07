@@ -399,7 +399,7 @@ loadRepository(repoPath);
 },1500);
 }
 }else{
-showMsg(Nodes.cloneMsg,cloneRes.errors||'Clone failed','bad');
+showMsg(Nodes.cloneMsg,cloneRes.output||'Clone failed','bad');
 }
 }catch(e){
 showMsg(Nodes.cloneMsg,`Error: ${e.message}`,'bad');
@@ -498,10 +498,16 @@ Nodes.cloneUrlBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.cloneConfirmBtn.clic
 // Initialize on load
 window.onload=async()=>{
 await initWorkspace();
-// Auto-load last repository if available
+// Auto-load last repository if it exists in workspace
 const saved=localStorage.getItem('gitutil_last_loc');
-if(saved&&WidgetState.repos.some(r=>r.path===saved)){
+if(saved){
+// Check if the saved path exists in the workspace repos
+const repoExists=WidgetState.repos.some(r=>r.path===saved);
+if(repoExists){
 loadRepository(saved);
+}
+// If not in workspace, we still show the repository selector
+// User can use "Custom Path" to access it
 }
 };
 </script>
