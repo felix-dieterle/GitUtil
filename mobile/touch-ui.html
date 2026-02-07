@@ -289,10 +289,13 @@ if(btn.dataset.orig)btn.innerHTML=btn.dataset.orig;
 }
 };
 const callWrapper=async(wrapperName,args=[])=>{
+console.log(`[GitUtil] Calling wrapper: ${wrapperName}`, args);
 try{
 if(typeof AndroidBridge !== 'undefined'){
 const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
-return JSON.parse(result);
+const parsed=JSON.parse(result);
+console.log(`[GitUtil] Wrapper ${wrapperName} result:`, parsed);
+return parsed;
 }else{
 const response=await fetch('http://localhost:8765/exec-wrapper',{
 method:'POST',
@@ -300,13 +303,16 @@ headers:{'Content-Type':'application/json'},
 body:JSON.stringify({wrapper:wrapperName,args:args})
 });
 if(!response.ok){
-throw new Error(`Server error: ${response.status}`);
+const error=`Server error: ${response.status}`;
+console.error(`[GitUtil] ${error}`);
+throw new Error(error);
 }
 const result=await response.json();
+console.log(`[GitUtil] Wrapper ${wrapperName} result:`, result);
 return result;
 }
 }catch(err){
-console.error('Wrapper execution failed:',err);
+console.error(`[GitUtil] Wrapper ${wrapperName} execution failed:`, err);
 return{success:false,output:`Connection failed: ${err.message}`};
 }
 };
@@ -629,10 +635,13 @@ if(!WidgetState.picked)return;
 if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`))return;
 hideMsg(Nodes.rollbackMsg);
 setBusy(Nodes.rollbackBtn,true);
+console.log(`[GitUtil] Starting rollback to commit: ${WidgetState.picked}`);
 try{
 const res=await callWrapper('apply-rollback',[WidgetState.loc,WidgetState.picked]);
+console.log('[GitUtil] Rollback response:', res);
 if(res.success&&res.output.includes('SUCCESS')){
-showMsg(Nodes.rollbackMsg,`✓ Rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
+console.log('[GitUtil] Rollback completed successfully');
+showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
 setTimeout(async()=>{
 const refresh=await callWrapper('pull-timeline',[WidgetState.loc]);
 if(refresh.success){
@@ -641,10 +650,13 @@ renderSnapshots(WidgetState.snapshots);
 }
 },1500);
 }else{
-showMsg(Nodes.rollbackMsg,'Rollback failed','bad');
+const errorMsg=res.errors||res.output||'Unknown error occurred';
+console.error('[GitUtil] Rollback failed:', errorMsg);
+showMsg(Nodes.rollbackMsg,`❌ Rollback failed: ${errorMsg}`,'bad');
 }
 }catch(e){
-showMsg(Nodes.rollbackMsg,`Error: ${e.message}`,'bad');
+console.error('[GitUtil] Rollback exception:', e);
+showMsg(Nodes.rollbackMsg,`❌ Error: ${e.message}`,'bad');
 }finally{
 setBusy(Nodes.rollbackBtn,false);
 }

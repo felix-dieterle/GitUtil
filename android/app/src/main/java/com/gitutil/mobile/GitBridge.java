@@ -117,23 +117,28 @@ public class GitBridge {
     }
 
     private String applyRollback(String path, String commitHash) {
+        Log.i(TAG, "Starting rollback to commit: " + commitHash + " in path: " + path);
         try (Repository repository = openRepository(path)) {
             try (Git git = new Git(repository)) {
                 ObjectId commitId = repository.resolve(commitHash);
                 if (commitId == null) {
-                    return createErrorResponse("ROLLBACK_FAILED\nCommit not found");
+                    Log.e(TAG, "Commit not found: " + commitHash);
+                    return createErrorResponse("ROLLBACK_FAILED\nCommit not found: " + commitHash);
                 }
                 
+                Log.i(TAG, "Performing hard reset to: " + commitHash);
                 git.reset()
                     .setMode(ResetCommand.ResetType.HARD)
                     .setRef(commitHash)
                     .call();
                 
-                return createSuccessResponse("ROLLBACK_SUCCESS\n");
+                Log.i(TAG, "Rollback completed successfully");
+                return createSuccessResponse("ROLLBACK_SUCCESS: " + commitHash);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error applying rollback", e);
-            return createErrorResponse("ROLLBACK_FAILED\n" + e.getMessage());
+            Log.e(TAG, "Error applying rollback to " + commitHash, e);
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            return createErrorResponse("ROLLBACK_FAILED\n" + errorMsg);
         }
     }
 
