@@ -4,6 +4,17 @@
 
 GitUtil Mobile is a touch-optimized web interface for managing git repositories on Android devices. It lets you browse commit history and rollback branches using a mobile-friendly interface that runs directly in Termux.
 
+## 🎉 New Features!
+
+**Latest improvements make GitUtil Mobile even more user-friendly:**
+- 🎯 **Automatic Workspace** - No manual path configuration needed
+- 📦 **Clone from URL** - Clone repositories with one tap
+- 📂 **Repository Browser** - Easily switch between multiple repos
+- 💾 **Auto-organized** - All repos stored in `/sdcard/GitUtil/repos`
+- 🔄 **Remember Last Repo** - Quick access to your recent work
+
+No more hunting for paths or remembering complex directory structures!
+
 ## Prerequisites
 
 1. **Install Termux** from F-Droid (not Google Play - that version is deprecated)
@@ -46,15 +57,34 @@ The launcher will:
 
 ## Using the Interface
 
-### First Time Setup
+### First Time Setup (New Improved Flow!)
 
-1. The interface will open in your browser
-2. You'll see the "Repository Location" screen
-3. Enter the full path to your git repository
+1. The interface will open in your browser showing the **Repository Selector**
+2. The app automatically creates a workspace at `/sdcard/GitUtil/repos` (or `~/GitUtil/repos` in Termux)
+3. You'll see three options:
+   - **📦 Clone Repository**: Clone a new repo from URL
+   - **📂 Custom Path**: Browse to an existing repository
+
+### Cloning a Repository (New Feature!)
+
+1. Tap "📦 Clone Repository"
+2. Enter the Git repository URL (e.g., `https://github.com/user/repo.git`)
+3. Optionally provide a custom name (or leave empty to auto-detect)
+4. Tap "Clone"
+5. The repository will be cloned to your workspace and automatically opened
+
+### Using Existing Repositories
+
+**Option 1: From Workspace**
+- If you have repositories in `/sdcard/GitUtil/repos`, they'll be listed automatically
+- Simply tap on any repository to open it
+
+**Option 2: Custom Path**
+1. Tap "📂 Custom Path"
+2. Enter the full path to your git repository
    - Example: `/storage/emulated/0/repos/my-project`
    - Or: `~/storage/shared/git/my-repo`
-
-4. Tap "Verify Location" to validate the repository
+3. Tap "Verify Location"
 
 ### Browsing Commits
 
@@ -85,10 +115,29 @@ Once validated, you'll see:
 
 ### Switching Repositories
 
-- Tap "Change Location" to switch to a different repository
-- Your last repository path is remembered automatically
+- Tap "Change Repo" to return to the repository selector
+- Your repositories will still be listed in the workspace
+- Clone additional repositories as needed
+- The app remembers your last used repository
 
 ## Tips & Tricks
+
+### Automatic Workspace Management (New!)
+The app now manages a workspace for you at `/sdcard/GitUtil/repos` (or `~/GitUtil/repos` in Termux):
+- All cloned repositories are automatically stored here
+- Easily switch between multiple repositories
+- No need to remember complex paths
+- Your workspace is automatically created on first launch
+
+### Cloning Repositories (New!)
+You can now clone repositories directly from the UI:
+```
+Examples:
+https://github.com/torvalds/linux.git
+https://gitlab.com/user/project.git
+git@github.com:user/repo.git
+```
+The repository name is automatically extracted from the URL, or you can provide a custom name.
 
 ### Access URL
 After the first launch, you can access the interface at:
@@ -103,6 +152,8 @@ Press Ctrl+C in the terminal where you ran `launch-mobile.sh` to stop the bridge
 
 ### Finding Repository Paths
 
+GitUtil now manages repositories automatically in the workspace, but if you need to find paths:
+
 To find the path of a git repository in Termux:
 ```bash
 cd /path/to/your/repo
@@ -110,9 +161,12 @@ pwd
 ```
 
 Common locations:
+- `~/GitUtil/repos/` - **New default workspace** (recommended)
 - `~/storage/shared/` - Your device's internal storage
 - `~/storage/downloads/` - Downloads folder
 - `~/repos/` - If you clone repos in Termux home
+
+**Tip:** Use the workspace at `~/GitUtil/repos/` for all new repositories to keep them organized!
 
 ### Verifying the Repository
 
@@ -126,15 +180,24 @@ If this works, GitUtil Mobile will work too.
 
 ### Working with Remote Repositories
 
-GitUtil Mobile works with any git repository, including ones with remotes:
+GitUtil Mobile now makes it easy to work with remote repositories:
 
+**New Way (Recommended):**
 ```bash
-# Clone a repository
-cd ~/storage/shared/
+# Just clone directly from the UI!
+# 1. Tap "Clone Repository"
+# 2. Paste URL: https://github.com/user/repo.git
+# 3. Tap Clone
+# Done! The repo is in your workspace and ready to use
+```
+
+**Classic Way (Still Supported):**
+```bash
+# Clone a repository manually
+cd ~/GitUtil/repos/
 git clone https://github.com/user/repo.git
 
-# Use the path in GitUtil Mobile
-# Path: /storage/emulated/0/shared/repo
+# It will automatically appear in the repository browser
 ```
 
 ## Troubleshooting
