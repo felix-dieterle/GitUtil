@@ -47,7 +47,7 @@ TARGET_HASH="$2"
 echo "[WRAPPER] ========================================"
 echo "[WRAPPER] Apply Rollback Wrapper Started"
 echo "[WRAPPER] ========================================"
-echo "[WRAPPER] Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "[WRAPPER] Timestamp: $(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo "[WRAPPER] Repository Path: ${LOCATION_PATH}"
 echo "[WRAPPER] Target Commit: ${TARGET_HASH}"
 

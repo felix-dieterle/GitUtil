@@ -116,11 +116,13 @@ public class GitBridge {
         }
     }
 
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    
     private String applyRollback(String path, String commitHash) {
         Log.i(TAG, "========================================");
         Log.i(TAG, "Apply Rollback Operation Started");
         Log.i(TAG, "========================================");
-        Log.i(TAG, "Timestamp: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()));
+        Log.i(TAG, "Timestamp: " + DATE_FORMAT.format(new Date()));
         Log.i(TAG, "Repository Path: " + path);
         Log.i(TAG, "Target Commit: " + commitHash);
         
