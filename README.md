@@ -121,26 +121,58 @@ The easiest way to use GitUtil on desktop/server is through the interactive term
 
 # Or specify a repository path directly
 ./gitutil.sh /path/to/your/repo
+
+# Or specify a remote repository URL (it will be cloned automatically)
+./gitutil.sh https://github.com/user/repo.git
 ```
 
 The interactive UI provides:
 - **Menu-based navigation** - Simple numbered options
 - **Repository browser** - Select and validate git repositories
+- **Auto-clone support** - Automatically clone remote repositories
+- **Default workspace** - Repositories cloned to `~/.gitutil/repos/` by default
 - **Commit timeline** - View commit history with full details
 - **Safe branch revert** - Confirmation prompts before destructive operations
 - **Color-coded output** - Visual feedback with success/warning/info messages
 
 #### UI Features:
-1. **Select repository** - Browse and validate git repositories on your system
+1. **Select repository** - Browse and validate git repositories on your system, or provide a remote URL
+   - Local paths: `/path/to/repo`, `~/myrepo`, or `.` for current directory
+   - Remote URLs: `https://github.com/user/repo.git`, `git@github.com:user/repo.git`
+   - Repositories are automatically cloned to `~/.gitutil/repos/` if they don't exist locally
 2. **View commit history** - See all commits with hash, author, timestamp, and message
 3. **Revert branch to commit** - Safely reset your branch to any previous commit
 4. **Exit** - Close the application
+
+#### Auto-Clone Functionality
+
+GitUtil can now work with remote repositories without manual cloning:
+
+- **Provide a URL**: Enter any git repository URL when prompted for a repository path
+- **Automatic cloning**: If the repository isn't already cloned, it will be cloned automatically
+- **Smart caching**: Already cloned repositories are reused, avoiding duplicate clones
+- **Default location**: Repositories are cloned to `~/.gitutil/repos/` (customizable via `GITUTIL_REPOS_DIR`)
+
+Example:
+```bash
+# In the interactive UI, select option 1 and enter:
+https://github.com/torvalds/linux.git
+
+# GitUtil will:
+# 1. Detect it's a remote URL
+# 2. Clone to ~/.gitutil/repos/linux
+# 3. Allow you to browse commits and revert branches
+```
 
 ### Direct Script Usage
 
 You can also call the scripts directly:
 
 ```bash
+# Prepare a repository (clone if URL, or return local path)
+./scripts/prepare_repo.sh /path/to/repo
+./scripts/prepare_repo.sh https://github.com/user/repo.git
+
 # Validate a repository
 ./scripts/validate_repo.sh /path/to/repo
 
