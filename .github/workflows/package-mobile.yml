@@ -180,7 +180,8 @@ jobs:
             month=$(date +%m)
             day=$(date +%d)
             hour=$(date +%H)
-            version_code=$(( (year - 2020) * 1000000 + month * 10000 + day * 100 + hour ))
+            # Force decimal interpretation with 10# prefix to avoid octal interpretation of zero-padded values
+            version_code=$(( (10#$year - 2020) * 1000000 + 10#$month * 10000 + 10#$day * 100 + 10#$hour ))
             echo "version=${version}" >> $GITHUB_OUTPUT
             echo "version_code=${version_code}" >> $GITHUB_OUTPUT
           fi
