@@ -52,12 +52,22 @@ This project uses a lightweight shell-based architecture:
 **Option 1: Standalone APK (Recommended - No Dependencies Required)**
 
 1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
-2. Open the app and tap "Launch GitUtil"
-3. Grant storage permission when prompted
-4. Enter your git repository path (e.g., `/sdcard/repos/my-project`)
+2. Open the app and grant storage permission when prompted
+3. **NEW: Automatic Workspace Setup!**
+   - The app automatically creates a default workspace at `/sdcard/GitUtil/repos`
+   - Clone repositories directly from GitHub/GitLab URLs
+   - Or browse to existing repositories on your device
+4. Select a repository from the list or clone a new one
 5. Browse commits and rollback as needed
 
 **The APK now includes built-in git support using JGit - no Termux, Python, or external dependencies required!**
+
+**New User-Friendly Features:**
+- 🎯 **No manual path entry required** - app manages workspace automatically
+- 📦 **Clone repositories with one tap** - just paste the URL
+- 📂 **Repository browser** - easily switch between multiple repositories
+- 💾 **Automatic workspace creation** - everything stored in `/sdcard/GitUtil/repos`
+- 🔄 **Remember last used repo** - quick access to your recent work
 
 **Option 2: Easy Install (Classic - Via Termux)**
 
@@ -93,12 +103,23 @@ The launcher will:
 - Open the interface in your browser
 
 **Using the Mobile Interface:**
-1. Enter your git repository path (e.g., `/sdcard/repos/my-project`)
-2. Tap "Verify Location" to validate and load the repository
+
+**For Standalone APK Users (New Improved Flow):**
+1. On first launch, the app automatically creates workspace at `/sdcard/GitUtil/repos`
+2. Choose one of three options:
+   - **Clone Repository**: Enter a Git URL (e.g., `https://github.com/user/repo.git`) and tap Clone
+   - **Browse Workspace**: Select from repositories already in your workspace
+   - **Custom Path**: Manually enter a repository path anywhere on your device
 3. Browse through commit snapshots in the timeline
 4. Tap a snapshot to select it
 5. Tap "Apply Rollback" to reset your branch to that snapshot
 6. Confirm the operation when prompted
+
+**For Termux Users:**
+1. The interface now shows your workspace repositories automatically
+2. Clone new repositories directly from the UI with a URL
+3. Or use "Custom Path" for repositories outside the workspace
+4. Browse commits and perform rollbacks just like the APK version
 
 **Important Notes:**
 - Keep the terminal open - the bridge server must run while using the interface
@@ -106,8 +127,11 @@ The launcher will:
 - The interface connects to http://localhost:8765
 
 **Tips:**
-- Bookmark http://localhost:8765 for quick access
-- The interface remembers your last repository path
+- The app automatically creates and manages `/sdcard/GitUtil/repos` workspace
+- Clone repositories with just a URL - no manual path configuration needed
+- The interface remembers your last used repository for quick access
+- Switch between multiple repositories effortlessly with the repository browser
+- For Termux: Bookmark http://localhost:8765 for quick access
 - Works with any git repository on your device
 - The bridge server provides secure localhost-only access
 

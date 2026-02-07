@@ -13,7 +13,12 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -24,6 +29,7 @@ import java.util.Locale;
  */
 public class GitBridge {
     private static final String TAG = "GitBridge";
+    private static final String DEFAULT_WORKSPACE_PATH = "/sdcard/GitUtil/repos";
 
     @JavascriptInterface
     public String executeWrapper(String wrapperName, String argsJson) {
@@ -37,6 +43,16 @@ public class GitBridge {
                     return pullTimeline(args.getString(0));
                 case "apply-rollback":
                     return applyRollback(args.getString(0), args.getString(1));
+                case "get-default-workspace":
+                    return getDefaultWorkspace();
+                case "ensure-workspace":
+                    return ensureWorkspace();
+                case "list-repositories":
+                    return listRepositories(args.length() > 0 ? args.getString(0) : DEFAULT_WORKSPACE_PATH);
+                case "clone-repository":
+                    return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null);
+                case "list-github-repos":
+                    return listGitHubRepositories(args.getString(0));
                 default:
                     return createErrorResponse("Unknown wrapper: " + wrapperName);
             }
@@ -118,6 +134,180 @@ public class GitBridge {
         } catch (Exception e) {
             Log.e(TAG, "Error applying rollback", e);
             return createErrorResponse("ROLLBACK_FAILED\n" + e.getMessage());
+        }
+    }
+
+    /**
+     * Get the default workspace path
+     */
+    private String getDefaultWorkspace() {
+        return createSuccessResponse(DEFAULT_WORKSPACE_PATH);
+    }
+
+    /**
+     * Ensure the default workspace directory exists
+     */
+    private String ensureWorkspace() {
+        try {
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            if (!workspaceDir.exists()) {
+                if (workspaceDir.mkdirs()) {
+                    return createSuccessResponse("WORKSPACE_CREATED:" + DEFAULT_WORKSPACE_PATH);
+                } else {
+                    return createErrorResponse("Failed to create workspace directory");
+                }
+            }
+            return createSuccessResponse("WORKSPACE_EXISTS:" + DEFAULT_WORKSPACE_PATH);
+        } catch (Exception e) {
+            Log.e(TAG, "Error ensuring workspace", e);
+            return createErrorResponse("Error creating workspace: " + e.getMessage());
+        }
+    }
+
+    /**
+     * List all git repositories in the specified directory
+     */
+    private String listRepositories(String workspacePath) {
+        try {
+            File workspace = new File(workspacePath);
+            if (!workspace.exists() || !workspace.isDirectory()) {
+                return createSuccessResponse("REPOS_BEGIN\nREPOS_END");
+            }
+
+            StringBuilder output = new StringBuilder();
+            output.append("REPOS_BEGIN\n");
+
+            File[] files = workspace.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        File gitDir = new File(file, ".git");
+                        if (gitDir.exists() && gitDir.isDirectory()) {
+                            output.append("REPO_NAME:").append(file.getName()).append("\n");
+                            output.append("REPO_PATH:").append(file.getAbsolutePath()).append("\n");
+                            output.append("REPO_SEPARATOR\n");
+                        }
+                    }
+                }
+            }
+
+            output.append("REPOS_END");
+            return createSuccessResponse(output.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing repositories", e);
+            return createErrorResponse("Error listing repositories: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Clone a git repository from URL to workspace
+     */
+    private String cloneRepository(String url, String targetName) {
+        try {
+            // Extract repository name from URL if target name not provided
+            if (targetName == null || targetName.trim().isEmpty()) {
+                targetName = extractRepoName(url);
+            }
+
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            if (!workspaceDir.exists()) {
+                workspaceDir.mkdirs();
+            }
+
+            File targetDir = new File(workspaceDir, targetName);
+            if (targetDir.exists()) {
+                return createErrorResponse("Repository directory already exists: " + targetName);
+            }
+
+            Log.i(TAG, "Cloning repository from " + url + " to " + targetDir.getAbsolutePath());
+            
+            Git.cloneRepository()
+                .setURI(url)
+                .setDirectory(targetDir)
+                .call();
+
+            return createSuccessResponse("CLONE_SUCCESS:" + targetDir.getAbsolutePath());
+        } catch (Exception e) {
+            Log.e(TAG, "Error cloning repository", e);
+            return createErrorResponse("CLONE_FAILED\n" + e.getMessage());
+        }
+    }
+
+    /**
+     * Extract repository name from git URL
+     */
+    private String extractRepoName(String url) {
+        String name = url;
+        // Remove trailing .git
+        if (name.endsWith(".git")) {
+            name = name.substring(0, name.length() - 4);
+        }
+        // Get last path segment
+        int lastSlash = name.lastIndexOf('/');
+        if (lastSlash >= 0) {
+            name = name.substring(lastSlash + 1);
+        }
+        // Remove any invalid characters
+        name = name.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return name;
+    }
+
+    /**
+     * List GitHub repositories using personal access token
+     */
+    private String listGitHubRepositories(String token) {
+        try {
+            StringBuilder output = new StringBuilder();
+            output.append("GITHUB_REPOS_BEGIN\n");
+
+            // GitHub API endpoint for user repositories
+            URL url = new URL("https://api.github.com/user/repos?per_page=100&sort=updated");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "token " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+
+                    // Parse JSON response
+                    JSONArray repos = new JSONArray(response.toString());
+                    for (int i = 0; i < repos.length(); i++) {
+                        JSONObject repo = repos.getJSONObject(i);
+                        String repoName = repo.getString("name");
+                        String repoFullName = repo.getString("full_name");
+                        String cloneUrl = repo.getString("clone_url");
+                        String description = repo.optString("description", "");
+                        boolean isPrivate = repo.getBoolean("private");
+
+                        output.append("GITHUB_REPO_NAME:").append(repoName).append("\n");
+                        output.append("GITHUB_REPO_FULLNAME:").append(repoFullName).append("\n");
+                        output.append("GITHUB_REPO_URL:").append(cloneUrl).append("\n");
+                        output.append("GITHUB_REPO_DESC:").append(description).append("\n");
+                        output.append("GITHUB_REPO_PRIVATE:").append(isPrivate).append("\n");
+                        output.append("GITHUB_REPO_SEPARATOR\n");
+                    }
+                }
+            } else if (responseCode == 401) {
+                return createErrorResponse("Invalid GitHub token. Please check your token and try again.");
+            } else {
+                return createErrorResponse("GitHub API error: HTTP " + responseCode);
+            }
+
+            output.append("GITHUB_REPOS_END");
+            return createSuccessResponse(output.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing GitHub repositories", e);
+            return createErrorResponse("Error connecting to GitHub: " + e.getMessage());
         }
     }
 

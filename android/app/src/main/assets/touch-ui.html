@@ -52,8 +52,18 @@ justify-content:center;gap:var(--gap);box-shadow:0 2px 6px rgba(0,0,0,0.1);font-
 .btn-success{background:var(--grass-500);color:var(--pearl-50)}
 .btn-danger{background:var(--fire-600);color:var(--pearl-50)}
 .btn-neutral{background:var(--pearl-50);color:var(--ink-900);border:2px solid var(--ink-300)}
+.btn-secondary{background:var(--ink-300);color:var(--pearl-50)}
 .btn-locked{opacity:0.4;pointer-events:none}
 .timeline-zone{max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:calc(var(--gap)*2)}
+.repo-list-zone{max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:calc(var(--gap)*2)}
+.repo-card{
+background:var(--pearl-100);border:2px solid var(--ink-300);
+border-radius:calc(var(--curve)*0.8);padding:calc(var(--gap)*2);
+margin-bottom:calc(var(--gap)*1.5);cursor:pointer;transition:all 0.15s;position:relative
+}
+.repo-card:active{background:#dde5ed;border-color:var(--sky-500)}
+.repo-card__name{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--ink-900)}
+.repo-card__path{font-size:12px;color:var(--ink-500);font-family:'Courier New',monospace}
 .snapshot-card{
 background:var(--pearl-100);border:2px solid var(--ink-300);
 border-radius:calc(var(--curve)*0.8);padding:calc(var(--gap)*2);
@@ -86,6 +96,11 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 .btn-row .action-btn{flex:1}
 .void-box{text-align:center;padding:calc(var(--gap)*5) calc(var(--gap)*2.5);color:var(--ink-500)}
 .void-box__icon{font-size:48px;margin-bottom:calc(var(--gap)*1.5);opacity:0.4}
+.link-btn{
+background:none;border:none;color:var(--sky-600);text-decoration:underline;
+padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-family:inherit
+}
+.link-btn:active{opacity:0.7}
 </style>
 </head>
 <body>
@@ -95,17 +110,97 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 <p>Git commit browser and rollback tool</p>
 </header>
 <main class="canvas">
-<div id="locationPicker" class="view-mode">
+<!-- Repository Selector View -->
+<div id="repoSelector" class="view-mode">
 <div class="card">
-<h2 class="card__header">Repository Location</h2>
+<h2 class="card__header">Select Repository</h2>
+<div id="workspaceInfo" class="notice-bar notice-info"></div>
+<div id="repoList" class="repo-list-zone"></div>
+<div class="btn-row">
+<button id="githubBtn" class="action-btn btn-primary">🌐 Browse GitHub</button>
+<button id="cloneBtn" class="action-btn btn-success">📦 Clone URL</button>
+</div>
+<div class="btn-row">
+<button id="browseBtn" class="action-btn btn-neutral">📂 Custom Path</button>
+</div>
+</div>
+<div id="repoMsg"></div>
+</div>
+
+<!-- GitHub Authentication View -->
+<div id="githubAuthView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">GitHub Authentication</h2>
+<div class="notice-bar notice-info">
+Enter your GitHub Personal Access Token to browse and clone your repositories.
+<br><br>
+<strong>How to get a token:</strong><br>
+1. Go to GitHub Settings → Developer settings → Personal access tokens<br>
+2. Generate new token (classic)<br>
+3. Select 'repo' scope<br>
+4. Copy the token
+</div>
+<div class="input-zone">
+<label class="input-zone__label">GitHub Token</label>
+<input type="password" id="githubTokenBox" class="text-box" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+</div>
+<div class="btn-row">
+<button id="githubAuthBtn" class="action-btn btn-primary">Connect to GitHub</button>
+<button id="githubAuthCancelBtn" class="action-btn btn-neutral">Cancel</button>
+</div>
+</div>
+<div id="githubAuthMsg"></div>
+</div>
+
+<!-- GitHub Repository Browser View -->
+<div id="githubBrowserView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">GitHub Repositories</h2>
+<div id="githubRepoList" class="repo-list-zone"></div>
+<div class="btn-row">
+<button id="githubBackBtn" class="action-btn btn-neutral">Back</button>
+</div>
+</div>
+<div id="githubBrowserMsg"></div>
+</div>
+
+<!-- Clone Repository View -->
+<div id="cloneView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">Clone Repository</h2>
+<div class="input-zone">
+<label class="input-zone__label">Repository URL</label>
+<input type="text" id="cloneUrlBox" class="text-box" placeholder="https://github.com/user/repo.git">
+</div>
+<div class="input-zone">
+<label class="input-zone__label">Repository Name (optional)</label>
+<input type="text" id="cloneNameBox" class="text-box" placeholder="Leave empty to auto-detect">
+</div>
+<div class="btn-row">
+<button id="cloneConfirmBtn" class="action-btn btn-success">Clone</button>
+<button id="cloneCancelBtn" class="action-btn btn-neutral">Cancel</button>
+</div>
+</div>
+<div id="cloneMsg"></div>
+</div>
+
+<!-- Custom Path View -->
+<div id="customPathView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">Custom Repository Path</h2>
 <div class="input-zone">
 <label class="input-zone__label">Full Path</label>
 <input type="text" id="locationBox" class="text-box" placeholder="/sdcard/git/my-project">
 </div>
-<button id="verifyBtn" class="action-btn btn-primary"><span>Verify Location</span></button>
+<div class="btn-row">
+<button id="verifyBtn" class="action-btn btn-primary">Verify Location</button>
+<button id="customCancelBtn" class="action-btn btn-neutral">Cancel</button>
+</div>
 </div>
 <div id="locationMsg"></div>
 </div>
+
+<!-- Timeline Viewer -->
 <div id="timelineViewer" class="view-mode screen-off">
 <div class="card">
 <h2 class="card__header">Timeline Browser</h2>
@@ -113,7 +208,7 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 <div id="snapshotList" class="timeline-zone"></div>
 <div class="btn-row">
 <button id="rollbackBtn" class="action-btn btn-danger btn-locked">Apply Rollback</button>
-<button id="switchBtn" class="action-btn btn-neutral">Change Location</button>
+<button id="switchBtn" class="action-btn btn-neutral">Change Repo</button>
 </div>
 </div>
 <div id="rollbackMsg"></div>
@@ -121,12 +216,41 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 </main>
 </div>
 <script>
-const WidgetState={loc:'',snapshots:[],picked:null};
+const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[],githubToken:'',githubRepos:[]};
 const Nodes={
+// Repo selector
+repoSelector:document.getElementById('repoSelector'),
+workspaceInfo:document.getElementById('workspaceInfo'),
+repoList:document.getElementById('repoList'),
+githubBtn:document.getElementById('githubBtn'),
+cloneBtn:document.getElementById('cloneBtn'),
+browseBtn:document.getElementById('browseBtn'),
+repoMsg:document.getElementById('repoMsg'),
+// GitHub auth view
+githubAuthView:document.getElementById('githubAuthView'),
+githubTokenBox:document.getElementById('githubTokenBox'),
+githubAuthBtn:document.getElementById('githubAuthBtn'),
+githubAuthCancelBtn:document.getElementById('githubAuthCancelBtn'),
+githubAuthMsg:document.getElementById('githubAuthMsg'),
+// GitHub browser view
+githubBrowserView:document.getElementById('githubBrowserView'),
+githubRepoList:document.getElementById('githubRepoList'),
+githubBackBtn:document.getElementById('githubBackBtn'),
+githubBrowserMsg:document.getElementById('githubBrowserMsg'),
+// Clone view
+cloneView:document.getElementById('cloneView'),
+cloneUrlBox:document.getElementById('cloneUrlBox'),
+cloneNameBox:document.getElementById('cloneNameBox'),
+cloneConfirmBtn:document.getElementById('cloneConfirmBtn'),
+cloneCancelBtn:document.getElementById('cloneCancelBtn'),
+cloneMsg:document.getElementById('cloneMsg'),
+// Custom path view
+customPathView:document.getElementById('customPathView'),
 locationBox:document.getElementById('locationBox'),
 verifyBtn:document.getElementById('verifyBtn'),
+customCancelBtn:document.getElementById('customCancelBtn'),
 locationMsg:document.getElementById('locationMsg'),
-locationPicker:document.getElementById('locationPicker'),
+// Timeline viewer
 timelineViewer:document.getElementById('timelineViewer'),
 pathDisplay:document.getElementById('pathDisplay'),
 snapshotList:document.getElementById('snapshotList'),
@@ -134,12 +258,23 @@ rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg')
 };
+
+const escapeHtml=(text)=>{
+const div=document.createElement('div');
+div.textContent=text;
+return div.innerHTML;
+};
+
 const showMsg=(target,txt,kind)=>{
 target.innerHTML=`<div class="notice-bar notice-${kind}">${txt}</div>`;
 };
 const hideMsg=(target)=>{target.innerHTML='';};
 const switchView=(view)=>{
-Nodes.locationPicker.classList.add('screen-off');
+Nodes.repoSelector.classList.add('screen-off');
+Nodes.githubAuthView.classList.add('screen-off');
+Nodes.githubBrowserView.classList.add('screen-off');
+Nodes.cloneView.classList.add('screen-off');
+Nodes.customPathView.classList.add('screen-off');
 Nodes.timelineViewer.classList.add('screen-off');
 view.classList.remove('screen-off');
 };
@@ -155,7 +290,6 @@ if(btn.dataset.orig)btn.innerHTML=btn.dataset.orig;
 };
 const callWrapper=async(wrapperName,args=[])=>{
 try{
-// Use Android bridge if available, otherwise fallback to HTTP
 if(typeof AndroidBridge !== 'undefined'){
 const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
 return JSON.parse(result);
@@ -176,6 +310,7 @@ console.error('Wrapper execution failed:',err);
 return{success:false,output:`Connection failed: ${err.message}`};
 }
 };
+
 const parseSnapshots=(raw)=>{
 const blocks=raw.split('SNAPSHOT_BEGIN').filter(b=>b.trim());
 return blocks.map(b=>{
@@ -191,6 +326,36 @@ if(snap.hash)snap.short=snap.hash.substring(0,8);
 return snap;
 }).filter(s=>s.hash&&s.title);
 };
+
+const parseRepos=(raw)=>{
+const blocks=raw.split('REPO_SEPARATOR').filter(b=>b.trim()&&b.includes('REPO_NAME'));
+return blocks.map(b=>{
+const lines=b.split('\n');
+const repo={};
+lines.forEach(ln=>{
+if(ln.startsWith('REPO_NAME:'))repo.name=ln.substring(10).trim();
+if(ln.startsWith('REPO_PATH:'))repo.path=ln.substring(10).trim();
+});
+return repo;
+}).filter(r=>r.name&&r.path);
+};
+
+const parseGitHubRepos=(raw)=>{
+const blocks=raw.split('GITHUB_REPO_SEPARATOR').filter(b=>b.trim()&&b.includes('GITHUB_REPO_NAME'));
+return blocks.map(b=>{
+const lines=b.split('\n');
+const repo={};
+lines.forEach(ln=>{
+if(ln.startsWith('GITHUB_REPO_NAME:'))repo.name=ln.substring('GITHUB_REPO_NAME:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_FULLNAME:'))repo.fullName=ln.substring('GITHUB_REPO_FULLNAME:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_URL:'))repo.url=ln.substring('GITHUB_REPO_URL:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_DESC:'))repo.description=ln.substring('GITHUB_REPO_DESC:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_PRIVATE:'))repo.isPrivate=ln.substring('GITHUB_REPO_PRIVATE:'.length).trim()==='true';
+});
+return repo;
+}).filter(r=>r.name&&r.url);
+};
+
 const renderSnapshots=(snaps)=>{
 Nodes.snapshotList.innerHTML='';
 if(snaps.length===0){
@@ -203,9 +368,9 @@ card.className='snapshot-card';
 card.dataset.hash=s.hash;
 card.innerHTML=`
 <div class="snapshot-card__hash">${s.short}</div>
-<div class="snapshot-card__msg">${s.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+<div class="snapshot-card__msg">${escapeHtml(s.title)}</div>
 <div class="snapshot-card__meta">
-<span class="meta-piece">👤 ${s.who.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+<span class="meta-piece">👤 ${escapeHtml(s.who)}</span>
 <span class="meta-piece">⏰ ${s.when}</span>
 </div>`;
 card.onclick=()=>{
@@ -217,6 +382,213 @@ Nodes.rollbackBtn.classList.remove('btn-locked');
 Nodes.snapshotList.appendChild(card);
 });
 };
+
+const renderRepos=(repos)=>{
+Nodes.repoList.innerHTML='';
+if(repos.length===0){
+Nodes.repoList.innerHTML='<div class="void-box"><div class="void-box__icon">📂</div><div>No repositories yet<br><small>Clone a repository to get started</small></div></div>';
+return;
+}
+repos.forEach(r=>{
+const card=document.createElement('div');
+card.className='repo-card';
+card.innerHTML=`
+<div class="repo-card__name">📁 ${escapeHtml(r.name)}</div>
+<div class="repo-card__path">${escapeHtml(r.path)}</div>`;
+card.onclick=()=>loadRepository(r.path);
+Nodes.repoList.appendChild(card);
+});
+};
+
+const renderGitHubRepos=(repos)=>{
+Nodes.githubRepoList.innerHTML='';
+if(repos.length===0){
+Nodes.githubRepoList.innerHTML='<div class="void-box"><div class="void-box__icon">🌐</div><div>No repositories found</div></div>';
+return;
+}
+repos.forEach(r=>{
+const card=document.createElement('div');
+card.className='repo-card';
+const privacyIcon=r.isPrivate?'🔒':'📂';
+const desc=r.description?`<div class="repo-card__path">${escapeHtml(r.description)}</div>`:'';
+card.innerHTML=`
+<div class="repo-card__name">${privacyIcon} ${escapeHtml(r.fullName)}</div>
+${desc}`;
+card.onclick=()=>cloneGitHubRepo(r.url,r.name);
+Nodes.githubRepoList.appendChild(card);
+});
+};
+
+const loadRepository=async(path)=>{
+hideMsg(Nodes.repoMsg);
+const checkRes=await callWrapper('check-location',[path]);
+if(!checkRes.success||!checkRes.output.includes('VALID')){
+showMsg(Nodes.repoMsg,'Invalid repository','bad');
+return;
+}
+WidgetState.loc=path;
+const timelineRes=await callWrapper('pull-timeline',[path]);
+if(timelineRes.success){
+WidgetState.snapshots=parseSnapshots(timelineRes.output);
+Nodes.pathDisplay.textContent=`Repository: ${path.split('/').pop()}`;
+renderSnapshots(WidgetState.snapshots);
+switchView(Nodes.timelineViewer);
+hideMsg(Nodes.rollbackMsg);
+localStorage.setItem('gitutil_last_loc',path);
+}else{
+showMsg(Nodes.repoMsg,'Failed to load commits','bad');
+}
+};
+
+const refreshRepoList=async()=>{
+const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
+if(listRes.success){
+WidgetState.repos=parseRepos(listRes.output);
+renderRepos(WidgetState.repos);
+}
+};
+
+const initWorkspace=async()=>{
+const wsRes=await callWrapper('ensure-workspace',[]);
+if(wsRes.success){
+const match=wsRes.output.match(/:(.*)/);
+if(match){
+WidgetState.workspace=match[1].trim();
+Nodes.workspaceInfo.textContent=`Workspace: ${WidgetState.workspace}`;
+await refreshRepoList();
+}
+}else{
+showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
+}
+};
+
+// GitHub button
+Nodes.githubBtn.onclick=()=>{
+hideMsg(Nodes.githubAuthMsg);
+const savedToken=localStorage.getItem('gitutil_github_token');
+if(savedToken){
+Nodes.githubTokenBox.value=savedToken;
+}
+switchView(Nodes.githubAuthView);
+};
+
+// GitHub auth button
+Nodes.githubAuthBtn.onclick=async()=>{
+const token=Nodes.githubTokenBox.value.trim();
+if(!token){
+showMsg(Nodes.githubAuthMsg,'Please enter your GitHub token','bad');
+return;
+}
+hideMsg(Nodes.githubAuthMsg);
+setBusy(Nodes.githubAuthBtn,true);
+try{
+const listRes=await callWrapper('list-github-repos',[token]);
+if(listRes.success&&listRes.output.includes('GITHUB_REPOS_BEGIN')){
+WidgetState.githubToken=token;
+WidgetState.githubRepos=parseGitHubRepos(listRes.output);
+localStorage.setItem('gitutil_github_token',token);
+renderGitHubRepos(WidgetState.githubRepos);
+switchView(Nodes.githubBrowserView);
+hideMsg(Nodes.githubBrowserMsg);
+}else{
+showMsg(Nodes.githubAuthMsg,listRes.output||'Failed to connect to GitHub','bad');
+}
+}catch(e){
+showMsg(Nodes.githubAuthMsg,`Error: ${e.message}`,'bad');
+}finally{
+setBusy(Nodes.githubAuthBtn,false);
+}
+};
+
+// GitHub auth cancel
+Nodes.githubAuthCancelBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// GitHub back button
+Nodes.githubBackBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// Clone GitHub repository
+const cloneGitHubRepo=async(url,name)=>{
+hideMsg(Nodes.githubBrowserMsg);
+showMsg(Nodes.githubBrowserMsg,`Cloning ${name}...`,'info');
+try{
+const cloneRes=await callWrapper('clone-repository',[url,name]);
+if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
+const match=cloneRes.output.match(/:(.*)/);
+if(match){
+const repoPath=match[1].trim();
+showMsg(Nodes.githubBrowserMsg,'✓ Repository cloned successfully','good');
+setTimeout(async()=>{
+await refreshRepoList();
+loadRepository(repoPath);
+},1500);
+}
+}else{
+showMsg(Nodes.githubBrowserMsg,cloneRes.output||'Clone failed','bad');
+}
+}catch(e){
+showMsg(Nodes.githubBrowserMsg,`Error: ${e.message}`,'bad');
+}
+};
+
+// Clone button
+Nodes.cloneBtn.onclick=()=>{
+hideMsg(Nodes.cloneMsg);
+Nodes.cloneUrlBox.value='';
+Nodes.cloneNameBox.value='';
+switchView(Nodes.cloneView);
+};
+
+// Clone confirm
+Nodes.cloneConfirmBtn.onclick=async()=>{
+const url=Nodes.cloneUrlBox.value.trim();
+const name=Nodes.cloneNameBox.value.trim();
+if(!url){
+showMsg(Nodes.cloneMsg,'Please enter a repository URL','bad');
+return;
+}
+hideMsg(Nodes.cloneMsg);
+setBusy(Nodes.cloneConfirmBtn,true);
+try{
+const cloneRes=await callWrapper('clone-repository',name?[url,name]:[url]);
+if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
+const match=cloneRes.output.match(/:(.*)/);
+if(match){
+const repoPath=match[1].trim();
+showMsg(Nodes.cloneMsg,'✓ Repository cloned successfully','good');
+setTimeout(async()=>{
+await refreshRepoList();
+loadRepository(repoPath);
+},1500);
+},1500);
+}
+}else{
+showMsg(Nodes.cloneMsg,cloneRes.output||'Clone failed','bad');
+}
+}catch(e){
+showMsg(Nodes.cloneMsg,`Error: ${e.message}`,'bad');
+}finally{
+setBusy(Nodes.cloneConfirmBtn,false);
+}
+};
+
+// Clone cancel
+Nodes.cloneCancelBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// Browse button
+Nodes.browseBtn.onclick=()=>{
+hideMsg(Nodes.locationMsg);
+const saved=localStorage.getItem('gitutil_last_loc');
+if(saved)Nodes.locationBox.value=saved;
+switchView(Nodes.customPathView);
+};
+
+// Verify button
 Nodes.verifyBtn.onclick=async()=>{
 const loc=Nodes.locationBox.value.trim();
 if(!loc){showMsg(Nodes.locationMsg,'Please enter a path','bad');return;}
@@ -233,6 +605,7 @@ Nodes.pathDisplay.textContent=`Location: ${loc}`;
 renderSnapshots(WidgetState.snapshots);
 switchView(Nodes.timelineViewer);
 hideMsg(Nodes.rollbackMsg);
+localStorage.setItem('gitutil_last_loc',loc);
 }else{
 showMsg(Nodes.locationMsg,'Failed to fetch timeline','bad');
 }
@@ -245,6 +618,13 @@ showMsg(Nodes.locationMsg,`Error: ${e.message}`,'bad');
 setBusy(Nodes.verifyBtn,false);
 }
 };
+
+// Custom cancel
+Nodes.customCancelBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// Rollback button
 Nodes.rollbackBtn.onclick=async()=>{
 if(!WidgetState.picked)return;
 if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`))return;
@@ -270,18 +650,32 @@ showMsg(Nodes.rollbackMsg,`Error: ${e.message}`,'bad');
 setBusy(Nodes.rollbackBtn,false);
 }
 };
+
+// Switch button
 Nodes.switchBtn.onclick=()=>{
 WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
-Nodes.locationBox.value='';hideMsg(Nodes.locationMsg);
-switchView(Nodes.locationPicker);
+switchView(Nodes.repoSelector);
+refreshRepoList();
 };
+
+// Enter key handlers
 Nodes.locationBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.verifyBtn.click();};
-window.onload=()=>{
+Nodes.cloneUrlBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.cloneConfirmBtn.click();};
+
+// Initialize on load
+window.onload=async()=>{
+await initWorkspace();
+// Auto-load last repository if it exists in workspace
 const saved=localStorage.getItem('gitutil_last_loc');
-if(saved)Nodes.locationBox.value=saved;
-};
-window.onbeforeunload=()=>{
-if(WidgetState.loc)localStorage.setItem('gitutil_last_loc',WidgetState.loc);
+if(saved){
+// Check if the saved path exists in the workspace repos
+const repoExists=WidgetState.repos.some(r=>r.path===saved);
+if(repoExists){
+loadRepository(saved);
+}
+// If not in workspace, we still show the repository selector
+// User can use "Custom Path" to access it
+}
 };
 </script>
 </body>
