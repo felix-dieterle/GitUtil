@@ -63,6 +63,90 @@ else
 fi
 WRAPPER_END
 
+# Generate workspace wrapper
+cat > "${WRAPPER_DIR}/ensure-workspace.sh" << 'WRAPPER_END'
+#!/bin/bash
+DEFAULT_WORKSPACE="/sdcard/GitUtil/repos"
+if [[ ! -d "${DEFAULT_WORKSPACE}" ]]; then
+    mkdir -p "${DEFAULT_WORKSPACE}"
+    if [[ $? -eq 0 ]]; then
+        echo "WORKSPACE_CREATED:${DEFAULT_WORKSPACE}"
+        exit 0
+    else
+        echo "ERROR: Failed to create workspace"
+        exit 1
+    fi
+fi
+echo "WORKSPACE_EXISTS:${DEFAULT_WORKSPACE}"
+exit 0
+WRAPPER_END
+
+# Generate list repositories wrapper
+cat > "${WRAPPER_DIR}/list-repositories.sh" << 'WRAPPER_END'
+#!/bin/bash
+WORKSPACE_PATH="${1:-/sdcard/GitUtil/repos}"
+echo "REPOS_BEGIN"
+if [[ -d "${WORKSPACE_PATH}" ]]; then
+    for dir in "${WORKSPACE_PATH}"/*; do
+        if [[ -d "${dir}/.git" ]]; then
+            basename="${dir##*/}"
+            echo "REPO_NAME:${basename}"
+            echo "REPO_PATH:${dir}"
+            echo "REPO_SEPARATOR"
+        fi
+    done
+fi
+echo "REPOS_END"
+exit 0
+WRAPPER_END
+
+# Generate clone repository wrapper
+cat > "${WRAPPER_DIR}/clone-repository.sh" << 'WRAPPER_END'
+#!/bin/bash
+REPO_URL="$1"
+REPO_NAME="$2"
+DEFAULT_WORKSPACE="/sdcard/GitUtil/repos"
+
+if [[ -z "${REPO_URL}" ]]; then
+    echo "ERROR: Repository URL required"
+    exit 1
+fi
+
+# Extract repo name from URL if not provided
+if [[ -z "${REPO_NAME}" ]]; then
+    REPO_NAME=$(basename "${REPO_URL}" .git)
+    REPO_NAME="${REPO_NAME//[^a-zA-Z0-9._-]/_}"
+fi
+
+# Ensure workspace exists
+mkdir -p "${DEFAULT_WORKSPACE}"
+
+TARGET_DIR="${DEFAULT_WORKSPACE}/${REPO_NAME}"
+if [[ -d "${TARGET_DIR}" ]]; then
+    echo "CLONE_FAILED"
+    echo "ERROR: Directory already exists: ${REPO_NAME}"
+    exit 1
+fi
+
+# Clone the repository
+git clone "${REPO_URL}" "${TARGET_DIR}"
+if [[ $? -eq 0 ]]; then
+    echo "CLONE_SUCCESS:${TARGET_DIR}"
+    exit 0
+else
+    echo "CLONE_FAILED"
+    echo "ERROR: Git clone failed"
+    exit 1
+fi
+WRAPPER_END
+
+# Generate get default workspace wrapper
+cat > "${WRAPPER_DIR}/get-default-workspace.sh" << 'WRAPPER_END'
+#!/bin/bash
+echo "/sdcard/GitUtil/repos"
+exit 0
+WRAPPER_END
+
 chmod +x "${WRAPPER_DIR}"/*.sh
 
 echo "✓ Wrappers generated"

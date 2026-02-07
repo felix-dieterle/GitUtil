@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<parameter name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>GitUtil Mobile</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -52,18 +52,8 @@ justify-content:center;gap:var(--gap);box-shadow:0 2px 6px rgba(0,0,0,0.1);font-
 .btn-success{background:var(--grass-500);color:var(--pearl-50)}
 .btn-danger{background:var(--fire-600);color:var(--pearl-50)}
 .btn-neutral{background:var(--pearl-50);color:var(--ink-900);border:2px solid var(--ink-300)}
-.btn-secondary{background:var(--ink-300);color:var(--pearl-50)}
 .btn-locked{opacity:0.4;pointer-events:none}
 .timeline-zone{max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:calc(var(--gap)*2)}
-.repo-list-zone{max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:calc(var(--gap)*2)}
-.repo-card{
-background:var(--pearl-100);border:2px solid var(--ink-300);
-border-radius:calc(var(--curve)*0.8);padding:calc(var(--gap)*2);
-margin-bottom:calc(var(--gap)*1.5);cursor:pointer;transition:all 0.15s;position:relative
-}
-.repo-card:active{background:#dde5ed;border-color:var(--sky-500)}
-.repo-card__name{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--ink-900)}
-.repo-card__path{font-size:12px;color:var(--ink-500);font-family:'Courier New',monospace}
 .snapshot-card{
 background:var(--pearl-100);border:2px solid var(--ink-300);
 border-radius:calc(var(--curve)*0.8);padding:calc(var(--gap)*2);
@@ -96,11 +86,6 @@ border-top-color:var(--pearl-50);border-radius:50%;animation:rotate-spin 0.8s li
 .btn-row .action-btn{flex:1}
 .void-box{text-align:center;padding:calc(var(--gap)*5) calc(var(--gap)*2.5);color:var(--ink-500)}
 .void-box__icon{font-size:48px;margin-bottom:calc(var(--gap)*1.5);opacity:0.4}
-.link-btn{
-background:none;border:none;color:var(--sky-600);text-decoration:underline;
-padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-family:inherit
-}
-.link-btn:active{opacity:0.7}
 </style>
 </head>
 <body>
@@ -110,57 +95,17 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 <p>Git commit browser and rollback tool</p>
 </header>
 <main class="canvas">
-<!-- Repository Selector View -->
-<div id="repoSelector" class="view-mode">
+<div id="locationPicker" class="view-mode">
 <div class="card">
-<h2 class="card__header">Select Repository</h2>
-<div id="workspaceInfo" class="notice-bar notice-info"></div>
-<div id="repoList" class="repo-list-zone"></div>
-<div class="btn-row">
-<button id="cloneBtn" class="action-btn btn-success">📦 Clone Repository</button>
-<button id="browseBtn" class="action-btn btn-neutral">📂 Custom Path</button>
-</div>
-</div>
-<div id="repoMsg"></div>
-</div>
-
-<!-- Clone Repository View -->
-<div id="cloneView" class="view-mode screen-off">
-<div class="card">
-<h2 class="card__header">Clone Repository</h2>
-<div class="input-zone">
-<label class="input-zone__label">Repository URL</label>
-<input type="text" id="cloneUrlBox" class="text-box" placeholder="https://github.com/user/repo.git">
-</div>
-<div class="input-zone">
-<label class="input-zone__label">Repository Name (optional)</label>
-<input type="text" id="cloneNameBox" class="text-box" placeholder="Leave empty to auto-detect">
-</div>
-<div class="btn-row">
-<button id="cloneConfirmBtn" class="action-btn btn-success">Clone</button>
-<button id="cloneCancelBtn" class="action-btn btn-neutral">Cancel</button>
-</div>
-</div>
-<div id="cloneMsg"></div>
-</div>
-
-<!-- Custom Path View -->
-<div id="customPathView" class="view-mode screen-off">
-<div class="card">
-<h2 class="card__header">Custom Repository Path</h2>
+<h2 class="card__header">Repository Location</h2>
 <div class="input-zone">
 <label class="input-zone__label">Full Path</label>
 <input type="text" id="locationBox" class="text-box" placeholder="/sdcard/git/my-project">
 </div>
-<div class="btn-row">
-<button id="verifyBtn" class="action-btn btn-primary">Verify Location</button>
-<button id="customCancelBtn" class="action-btn btn-neutral">Cancel</button>
-</div>
+<button id="verifyBtn" class="action-btn btn-primary"><span>Verify Location</span></button>
 </div>
 <div id="locationMsg"></div>
 </div>
-
-<!-- Timeline Viewer -->
 <div id="timelineViewer" class="view-mode screen-off">
 <div class="card">
 <h2 class="card__header">Timeline Browser</h2>
@@ -168,7 +113,7 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 <div id="snapshotList" class="timeline-zone"></div>
 <div class="btn-row">
 <button id="rollbackBtn" class="action-btn btn-danger btn-locked">Apply Rollback</button>
-<button id="switchBtn" class="action-btn btn-neutral">Change Repo</button>
+<button id="switchBtn" class="action-btn btn-neutral">Change Location</button>
 </div>
 </div>
 <div id="rollbackMsg"></div>
@@ -176,29 +121,12 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 </main>
 </div>
 <script>
-const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[]};
+const WidgetState={loc:'',snapshots:[],picked:null};
 const Nodes={
-// Repo selector
-repoSelector:document.getElementById('repoSelector'),
-workspaceInfo:document.getElementById('workspaceInfo'),
-repoList:document.getElementById('repoList'),
-cloneBtn:document.getElementById('cloneBtn'),
-browseBtn:document.getElementById('browseBtn'),
-repoMsg:document.getElementById('repoMsg'),
-// Clone view
-cloneView:document.getElementById('cloneView'),
-cloneUrlBox:document.getElementById('cloneUrlBox'),
-cloneNameBox:document.getElementById('cloneNameBox'),
-cloneConfirmBtn:document.getElementById('cloneConfirmBtn'),
-cloneCancelBtn:document.getElementById('cloneCancelBtn'),
-cloneMsg:document.getElementById('cloneMsg'),
-// Custom path view
-customPathView:document.getElementById('customPathView'),
 locationBox:document.getElementById('locationBox'),
 verifyBtn:document.getElementById('verifyBtn'),
-customCancelBtn:document.getElementById('customCancelBtn'),
 locationMsg:document.getElementById('locationMsg'),
-// Timeline viewer
+locationPicker:document.getElementById('locationPicker'),
 timelineViewer:document.getElementById('timelineViewer'),
 pathDisplay:document.getElementById('pathDisplay'),
 snapshotList:document.getElementById('snapshotList'),
@@ -206,15 +134,12 @@ rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg')
 };
-
 const showMsg=(target,txt,kind)=>{
 target.innerHTML=`<div class="notice-bar notice-${kind}">${txt}</div>`;
 };
 const hideMsg=(target)=>{target.innerHTML='';};
 const switchView=(view)=>{
-Nodes.repoSelector.classList.add('screen-off');
-Nodes.cloneView.classList.add('screen-off');
-Nodes.customPathView.classList.add('screen-off');
+Nodes.locationPicker.classList.add('screen-off');
 Nodes.timelineViewer.classList.add('screen-off');
 view.classList.remove('screen-off');
 };
@@ -230,10 +155,6 @@ if(btn.dataset.orig)btn.innerHTML=btn.dataset.orig;
 };
 const callWrapper=async(wrapperName,args=[])=>{
 try{
-if(typeof AndroidBridge !== 'undefined'){
-const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
-return JSON.parse(result);
-}else{
 const response=await fetch('http://localhost:8765/exec-wrapper',{
 method:'POST',
 headers:{'Content-Type':'application/json'},
@@ -244,13 +165,11 @@ throw new Error(`Server error: ${response.status}`);
 }
 const result=await response.json();
 return result;
-}
 }catch(err){
 console.error('Wrapper execution failed:',err);
 return{success:false,output:`Connection failed: ${err.message}`};
 }
 };
-
 const parseSnapshots=(raw)=>{
 const blocks=raw.split('SNAPSHOT_BEGIN').filter(b=>b.trim());
 return blocks.map(b=>{
@@ -266,20 +185,6 @@ if(snap.hash)snap.short=snap.hash.substring(0,8);
 return snap;
 }).filter(s=>s.hash&&s.title);
 };
-
-const parseRepos=(raw)=>{
-const blocks=raw.split('REPO_SEPARATOR').filter(b=>b.trim()&&b.includes('REPO_NAME'));
-return blocks.map(b=>{
-const lines=b.split('\n');
-const repo={};
-lines.forEach(ln=>{
-if(ln.startsWith('REPO_NAME:'))repo.name=ln.substring(10).trim();
-if(ln.startsWith('REPO_PATH:'))repo.path=ln.substring(10).trim();
-});
-return repo;
-}).filter(r=>r.name&&r.path);
-};
-
 const renderSnapshots=(snaps)=>{
 Nodes.snapshotList.innerHTML='';
 if(snaps.length===0){
@@ -306,122 +211,6 @@ Nodes.rollbackBtn.classList.remove('btn-locked');
 Nodes.snapshotList.appendChild(card);
 });
 };
-
-const renderRepos=(repos)=>{
-Nodes.repoList.innerHTML='';
-if(repos.length===0){
-Nodes.repoList.innerHTML='<div class="void-box"><div class="void-box__icon">📂</div><div>No repositories yet<br><small>Clone a repository to get started</small></div></div>';
-return;
-}
-repos.forEach(r=>{
-const card=document.createElement('div');
-card.className='repo-card';
-card.innerHTML=`
-<div class="repo-card__name">📁 ${r.name.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-<div class="repo-card__path">${r.path.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
-card.onclick=()=>loadRepository(r.path);
-Nodes.repoList.appendChild(card);
-});
-};
-
-const loadRepository=async(path)=>{
-hideMsg(Nodes.repoMsg);
-const checkRes=await callWrapper('check-location',[path]);
-if(!checkRes.success||!checkRes.output.includes('VALID')){
-showMsg(Nodes.repoMsg,'Invalid repository','bad');
-return;
-}
-WidgetState.loc=path;
-const timelineRes=await callWrapper('pull-timeline',[path]);
-if(timelineRes.success){
-WidgetState.snapshots=parseSnapshots(timelineRes.output);
-Nodes.pathDisplay.textContent=`Repository: ${path.split('/').pop()}`;
-renderSnapshots(WidgetState.snapshots);
-switchView(Nodes.timelineViewer);
-hideMsg(Nodes.rollbackMsg);
-localStorage.setItem('gitutil_last_loc',path);
-}else{
-showMsg(Nodes.repoMsg,'Failed to load commits','bad');
-}
-};
-
-const refreshRepoList=async()=>{
-const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
-if(listRes.success){
-WidgetState.repos=parseRepos(listRes.output);
-renderRepos(WidgetState.repos);
-}
-};
-
-const initWorkspace=async()=>{
-const wsRes=await callWrapper('ensure-workspace',[]);
-if(wsRes.success){
-const match=wsRes.output.match(/:(.*)/);
-if(match){
-WidgetState.workspace=match[1].trim();
-Nodes.workspaceInfo.textContent=`Workspace: ${WidgetState.workspace}`;
-await refreshRepoList();
-}
-}else{
-showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
-}
-};
-
-// Clone button
-Nodes.cloneBtn.onclick=()=>{
-hideMsg(Nodes.cloneMsg);
-Nodes.cloneUrlBox.value='';
-Nodes.cloneNameBox.value='';
-switchView(Nodes.cloneView);
-};
-
-// Clone confirm
-Nodes.cloneConfirmBtn.onclick=async()=>{
-const url=Nodes.cloneUrlBox.value.trim();
-const name=Nodes.cloneNameBox.value.trim();
-if(!url){
-showMsg(Nodes.cloneMsg,'Please enter a repository URL','bad');
-return;
-}
-hideMsg(Nodes.cloneMsg);
-setBusy(Nodes.cloneConfirmBtn,true);
-try{
-const cloneRes=await callWrapper('clone-repository',name?[url,name]:[url]);
-if(cloneRes.success&&cloneRes.output.includes('SUCCESS')){
-const match=cloneRes.output.match(/:(.*)/);
-if(match){
-const repoPath=match[1].trim();
-showMsg(Nodes.cloneMsg,'✓ Repository cloned successfully','good');
-setTimeout(async()=>{
-await refreshRepoList();
-switchView(Nodes.repoSelector);
-loadRepository(repoPath);
-},1500);
-}
-}else{
-showMsg(Nodes.cloneMsg,cloneRes.errors||'Clone failed','bad');
-}
-}catch(e){
-showMsg(Nodes.cloneMsg,`Error: ${e.message}`,'bad');
-}finally{
-setBusy(Nodes.cloneConfirmBtn,false);
-}
-};
-
-// Clone cancel
-Nodes.cloneCancelBtn.onclick=()=>{
-switchView(Nodes.repoSelector);
-};
-
-// Browse button
-Nodes.browseBtn.onclick=()=>{
-hideMsg(Nodes.locationMsg);
-const saved=localStorage.getItem('gitutil_last_loc');
-if(saved)Nodes.locationBox.value=saved;
-switchView(Nodes.customPathView);
-};
-
-// Verify button
 Nodes.verifyBtn.onclick=async()=>{
 const loc=Nodes.locationBox.value.trim();
 if(!loc){showMsg(Nodes.locationMsg,'Please enter a path','bad');return;}
@@ -438,7 +227,6 @@ Nodes.pathDisplay.textContent=`Location: ${loc}`;
 renderSnapshots(WidgetState.snapshots);
 switchView(Nodes.timelineViewer);
 hideMsg(Nodes.rollbackMsg);
-localStorage.setItem('gitutil_last_loc',loc);
 }else{
 showMsg(Nodes.locationMsg,'Failed to fetch timeline','bad');
 }
@@ -451,13 +239,6 @@ showMsg(Nodes.locationMsg,`Error: ${e.message}`,'bad');
 setBusy(Nodes.verifyBtn,false);
 }
 };
-
-// Custom cancel
-Nodes.customCancelBtn.onclick=()=>{
-switchView(Nodes.repoSelector);
-};
-
-// Rollback button
 Nodes.rollbackBtn.onclick=async()=>{
 if(!WidgetState.picked)return;
 if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`))return;
@@ -483,26 +264,18 @@ showMsg(Nodes.rollbackMsg,`Error: ${e.message}`,'bad');
 setBusy(Nodes.rollbackBtn,false);
 }
 };
-
-// Switch button
 Nodes.switchBtn.onclick=()=>{
 WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
-switchView(Nodes.repoSelector);
-refreshRepoList();
+Nodes.locationBox.value='';hideMsg(Nodes.locationMsg);
+switchView(Nodes.locationPicker);
 };
-
-// Enter key handlers
 Nodes.locationBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.verifyBtn.click();};
-Nodes.cloneUrlBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.cloneConfirmBtn.click();};
-
-// Initialize on load
-window.onload=async()=>{
-await initWorkspace();
-// Auto-load last repository if available
+window.onload=()=>{
 const saved=localStorage.getItem('gitutil_last_loc');
-if(saved&&WidgetState.repos.some(r=>r.path===saved)){
-loadRepository(saved);
-}
+if(saved)Nodes.locationBox.value=saved;
+};
+window.onbeforeunload=()=>{
+if(WidgetState.loc)localStorage.setItem('gitutil_last_loc',WidgetState.loc);
 };
 </script>
 </body>

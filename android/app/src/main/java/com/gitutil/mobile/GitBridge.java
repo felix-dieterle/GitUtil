@@ -24,6 +24,7 @@ import java.util.Locale;
  */
 public class GitBridge {
     private static final String TAG = "GitBridge";
+    private static final String DEFAULT_WORKSPACE_PATH = "/sdcard/GitUtil/repos";
 
     @JavascriptInterface
     public String executeWrapper(String wrapperName, String argsJson) {
@@ -37,6 +38,14 @@ public class GitBridge {
                     return pullTimeline(args.getString(0));
                 case "apply-rollback":
                     return applyRollback(args.getString(0), args.getString(1));
+                case "get-default-workspace":
+                    return getDefaultWorkspace();
+                case "ensure-workspace":
+                    return ensureWorkspace();
+                case "list-repositories":
+                    return listRepositories(args.length() > 0 ? args.getString(0) : DEFAULT_WORKSPACE_PATH);
+                case "clone-repository":
+                    return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null);
                 default:
                     return createErrorResponse("Unknown wrapper: " + wrapperName);
             }
@@ -119,6 +128,121 @@ public class GitBridge {
             Log.e(TAG, "Error applying rollback", e);
             return createErrorResponse("ROLLBACK_FAILED\n" + e.getMessage());
         }
+    }
+
+    /**
+     * Get the default workspace path
+     */
+    private String getDefaultWorkspace() {
+        return createSuccessResponse(DEFAULT_WORKSPACE_PATH);
+    }
+
+    /**
+     * Ensure the default workspace directory exists
+     */
+    private String ensureWorkspace() {
+        try {
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            if (!workspaceDir.exists()) {
+                if (workspaceDir.mkdirs()) {
+                    return createSuccessResponse("WORKSPACE_CREATED:" + DEFAULT_WORKSPACE_PATH);
+                } else {
+                    return createErrorResponse("Failed to create workspace directory");
+                }
+            }
+            return createSuccessResponse("WORKSPACE_EXISTS:" + DEFAULT_WORKSPACE_PATH);
+        } catch (Exception e) {
+            Log.e(TAG, "Error ensuring workspace", e);
+            return createErrorResponse("Error creating workspace: " + e.getMessage());
+        }
+    }
+
+    /**
+     * List all git repositories in the specified directory
+     */
+    private String listRepositories(String workspacePath) {
+        try {
+            File workspace = new File(workspacePath);
+            if (!workspace.exists() || !workspace.isDirectory()) {
+                return createSuccessResponse("REPOS_BEGIN\nREPOS_END");
+            }
+
+            StringBuilder output = new StringBuilder();
+            output.append("REPOS_BEGIN\n");
+
+            File[] files = workspace.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        File gitDir = new File(file, ".git");
+                        if (gitDir.exists() && gitDir.isDirectory()) {
+                            output.append("REPO_NAME:").append(file.getName()).append("\n");
+                            output.append("REPO_PATH:").append(file.getAbsolutePath()).append("\n");
+                            output.append("REPO_SEPARATOR\n");
+                        }
+                    }
+                }
+            }
+
+            output.append("REPOS_END");
+            return createSuccessResponse(output.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing repositories", e);
+            return createErrorResponse("Error listing repositories: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Clone a git repository from URL to workspace
+     */
+    private String cloneRepository(String url, String targetName) {
+        try {
+            // Extract repository name from URL if target name not provided
+            if (targetName == null || targetName.trim().isEmpty()) {
+                targetName = extractRepoName(url);
+            }
+
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            if (!workspaceDir.exists()) {
+                workspaceDir.mkdirs();
+            }
+
+            File targetDir = new File(workspaceDir, targetName);
+            if (targetDir.exists()) {
+                return createErrorResponse("CLONE_FAILED\nRepository directory already exists: " + targetName);
+            }
+
+            Log.i(TAG, "Cloning repository from " + url + " to " + targetDir.getAbsolutePath());
+            
+            Git.cloneRepository()
+                .setURI(url)
+                .setDirectory(targetDir)
+                .call();
+
+            return createSuccessResponse("CLONE_SUCCESS:" + targetDir.getAbsolutePath());
+        } catch (Exception e) {
+            Log.e(TAG, "Error cloning repository", e);
+            return createErrorResponse("CLONE_FAILED\n" + e.getMessage());
+        }
+    }
+
+    /**
+     * Extract repository name from git URL
+     */
+    private String extractRepoName(String url) {
+        String name = url;
+        // Remove trailing .git
+        if (name.endsWith(".git")) {
+            name = name.substring(0, name.length() - 4);
+        }
+        // Get last path segment
+        int lastSlash = name.lastIndexOf('/');
+        if (lastSlash >= 0) {
+            name = name.substring(lastSlash + 1);
+        }
+        // Remove any invalid characters
+        name = name.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return name;
     }
 
     private String createSuccessResponse(String output) {
