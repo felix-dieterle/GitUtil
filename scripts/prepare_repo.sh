@@ -56,7 +56,8 @@ if is_remote_url "$REPO_INPUT"; then
     # Clone the repository (disable terminal prompts and set timeout)
     # GIT_TERMINAL_PROMPT=0 prevents credential prompts
     # GIT_SSH_COMMAND sets SSH options to fail fast without prompting
-    if ! GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no" \
+    # Using StrictHostKeyChecking=accept-new for better security
+    if ! GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new" \
          timeout 10 git clone "$REPO_INPUT" "$LOCAL_PATH" >/dev/null 2>&1; then
         echo "ERROR: Failed to clone repository from $REPO_INPUT"
         exit 1

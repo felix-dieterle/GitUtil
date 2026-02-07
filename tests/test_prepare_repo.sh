@@ -148,4 +148,3 @@ teardown
 # Print summary and exit
 print_test_summary
 exit $?
-
