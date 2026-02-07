@@ -101,6 +101,9 @@ background:none;border:none;color:var(--sky-600);text-decoration:underline;
 padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-family:inherit
 }
 .link-btn:active{opacity:0.7}
+.log-error{color:#d62828}
+.log-warn{color:#f77f00}
+.log-info{color:#2e8bc0}
 </style>
 </head>
 <body>
@@ -722,6 +725,7 @@ errorDetails+=res.errors;
 console.error('[GitUtil] Error details:', res.errors);
 }
 if(res.output&&!res.output.includes('SUCCESS')){
+if(errorDetails)errorDetails+='\n';
 errorDetails+=res.output;
 console.error('[GitUtil] Output:', res.output);
 }
@@ -786,8 +790,8 @@ return;
 }
 const logHtml=AppLogs.map(log=>{
 const timeStr=new Date(log.time).toLocaleTimeString();
-const colorClass=log.type==='error'?'style="color: #d62828;"':log.type==='warn'?'style="color: #f77f00;"':'';
-return `<div ${colorClass}>${timeStr} ${escapeHtml(log.msg)}</div>`;
+const cssClass=log.type==='error'?'log-error':log.type==='warn'?'log-warn':log.type==='info'?'log-info':'';
+return `<div class="${cssClass}">${timeStr} ${escapeHtml(log.msg)}</div>`;
 }).join('');
 Nodes.logContent.innerHTML=logHtml;
 Nodes.logContent.scrollTop=Nodes.logContent.scrollHeight;
