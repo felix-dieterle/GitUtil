@@ -209,7 +209,7 @@ public class GitBridge {
 
             File targetDir = new File(workspaceDir, targetName);
             if (targetDir.exists()) {
-                return createErrorResponse("CLONE_FAILED\nRepository directory already exists: " + targetName);
+                return createErrorResponse("Repository directory already exists: " + targetName);
             }
 
             Log.i(TAG, "Cloning repository from " + url + " to " + targetDir.getAbsolutePath());

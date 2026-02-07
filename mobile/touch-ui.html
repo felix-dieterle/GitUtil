@@ -387,15 +387,15 @@ hideMsg(Nodes.cloneMsg);
 setBusy(Nodes.cloneConfirmBtn,true);
 try{
 const cloneRes=await callWrapper('clone-repository',name?[url,name]:[url]);
-if(cloneRes.success&&cloneRes.output.includes('SUCCESS')){
+if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
 const match=cloneRes.output.match(/:(.*)/);
 if(match){
 const repoPath=match[1].trim();
 showMsg(Nodes.cloneMsg,'✓ Repository cloned successfully','good');
 setTimeout(async()=>{
 await refreshRepoList();
-switchView(Nodes.repoSelector);
 loadRepository(repoPath);
+},1500);
 },1500);
 }
 }else{

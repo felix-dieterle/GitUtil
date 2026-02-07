@@ -60,7 +60,7 @@ The launcher will:
 ### First Time Setup (New Improved Flow!)
 
 1. The interface will open in your browser showing the **Repository Selector**
-2. The app automatically creates a workspace at `/sdcard/GitUtil/repos` (or `~/GitUtil/repos` in Termux)
+2. The app automatically creates a workspace at `/sdcard/GitUtil/repos`
 3. You'll see three options:
    - **📦 Clone Repository**: Clone a new repo from URL
    - **📂 Custom Path**: Browse to an existing repository
@@ -123,7 +123,7 @@ Once validated, you'll see:
 ## Tips & Tricks
 
 ### Automatic Workspace Management (New!)
-The app now manages a workspace for you at `/sdcard/GitUtil/repos` (or `~/GitUtil/repos` in Termux):
+The app now manages a workspace for you at `/sdcard/GitUtil/repos`:
 - All cloned repositories are automatically stored here
 - Easily switch between multiple repositories
 - No need to remember complex paths
@@ -161,12 +161,12 @@ pwd
 ```
 
 Common locations:
-- `~/GitUtil/repos/` - **New default workspace** (recommended)
+- `/sdcard/GitUtil/repos/` - **Default workspace** (recommended)
 - `~/storage/shared/` - Your device's internal storage
 - `~/storage/downloads/` - Downloads folder
 - `~/repos/` - If you clone repos in Termux home
 
-**Tip:** Use the workspace at `~/GitUtil/repos/` for all new repositories to keep them organized!
+**Tip:** Use the workspace at `/sdcard/GitUtil/repos/` for all new repositories to keep them organized!
 
 ### Verifying the Repository
 
@@ -194,7 +194,7 @@ GitUtil Mobile now makes it easy to work with remote repositories:
 **Classic Way (Still Supported):**
 ```bash
 # Clone a repository manually
-cd ~/GitUtil/repos/
+cd /sdcard/GitUtil/repos/
 git clone https://github.com/user/repo.git
 
 # It will automatically appear in the repository browser
