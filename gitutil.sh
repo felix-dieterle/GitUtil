@@ -66,23 +66,28 @@ show_main_header() {
 # Get repository path from user
 get_repository_path() {
     local default_path="."
-    echo -e "${BOLD}Enter git repository path${NC} (press Enter for current directory):"
+    echo -e "${BOLD}Enter git repository path or URL${NC} (press Enter for current directory):"
+    echo -e "${CYAN}  • Local path: /path/to/repo or ~/myrepo${NC}"
+    echo -e "${CYAN}  • Remote URL: https://github.com/user/repo.git${NC}"
     echo -n "> "
-    read -r repo_path
+    read -r repo_input
     
-    if [ -z "$repo_path" ]; then
-        repo_path="$default_path"
+    if [ -z "$repo_input" ]; then
+        repo_input="$default_path"
     fi
     
-    # Expand ~ to home directory
-    repo_path="${repo_path/#\~/$HOME}"
+    # Use prepare_repo.sh to handle both local paths and remote URLs
+    print_info "Preparing repository..."
+    local repo_path
+    repo_path=$("$SCRIPTS_PATH/prepare_repo.sh" "$repo_input" 2>&1)
     
-    # Convert to absolute path
-    if [ -d "$repo_path" ]; then
-        repo_path="$(cd "$repo_path" && pwd)"
+    if [ $? -eq 0 ]; then
+        echo "$repo_path"
+    else
+        print_error "Failed to prepare repository"
+        echo "$repo_path" >&2
+        return 1
     fi
-    
-    echo "$repo_path"
 }
 
 # Validate repository
@@ -230,9 +235,11 @@ show_menu() {
                 echo ""
                 local new_path
                 new_path=$(get_repository_path)
-                echo ""
-                if validate_repository "$new_path"; then
-                    repo_path="$new_path"
+                if [ $? -eq 0 ] && [ -n "$new_path" ]; then
+                    echo ""
+                    if validate_repository "$new_path"; then
+                        repo_path="$new_path"
+                    fi
                 fi
                 echo ""
                 echo "Press Enter to continue..."
@@ -338,21 +345,33 @@ main() {
     # Check if required scripts exist
     if [ ! -f "$SCRIPTS_PATH/validate_repo.sh" ] || \
        [ ! -f "$SCRIPTS_PATH/fetch_commits.sh" ] || \
-       [ ! -f "$SCRIPTS_PATH/revert_branch.sh" ]; then
+       [ ! -f "$SCRIPTS_PATH/revert_branch.sh" ] || \
+       [ ! -f "$SCRIPTS_PATH/prepare_repo.sh" ]; then
         echo "Error: Required scripts not found in $SCRIPTS_PATH"
         exit 1
     fi
     
-    # If repository path provided as argument, use it
+    # If repository path/URL provided as argument, prepare it
     local initial_repo=""
     if [ -n "$1" ]; then
-        initial_repo="$1"
-        if validate_repository "$initial_repo"; then
-            echo ""
-            echo "Press Enter to continue..."
-            read -r
+        print_info "Preparing repository from argument..."
+        local prepared_path
+        prepared_path=$("$SCRIPTS_PATH/prepare_repo.sh" "$1" 2>&1)
+        if [ $? -eq 0 ]; then
+            initial_repo="$prepared_path"
+            if validate_repository "$initial_repo"; then
+                echo ""
+                echo "Press Enter to continue..."
+                read -r
+            else
+                initial_repo=""
+                echo ""
+                echo "Press Enter to continue..."
+                read -r
+            fi
         else
-            initial_repo=""
+            print_error "Failed to prepare repository: $1"
+            echo "$prepared_path"
             echo ""
             echo "Press Enter to continue..."
             read -r
