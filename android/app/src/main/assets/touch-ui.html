@@ -132,13 +132,18 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 <div class="card">
 <h2 class="card__header">GitHub Authentication</h2>
 <div class="notice-bar notice-info">
-Enter your GitHub Personal Access Token to browse and clone your repositories.
+ℹ️ Enter your GitHub Personal Access Token to browse and clone your repositories.
 <br><br>
 <strong>How to get a token:</strong><br>
 1. Go to GitHub Settings → Developer settings → Personal access tokens<br>
 2. Generate new token (classic)<br>
-3. Select 'repo' scope<br>
+3. Select '<strong>repo</strong>' scope - This permission allows GitUtil to:<br>
+   • Read your repository list (public and private)<br>
+   • Clone repositories to your device<br>
 4. Copy the token
+<br><br>
+🔒 <strong>Security & Privacy:</strong><br>
+Your token is stored only on your device and is used exclusively to communicate with GitHub's API. GitUtil never sends your token to any third-party servers.
 </div>
 <div class="input-zone">
 <label class="input-zone__label">GitHub Token</label>
