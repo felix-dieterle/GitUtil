@@ -174,7 +174,7 @@ public class GitUtilActivity extends AppCompatActivity {
                     .setMessage(message)
                     .setPositiveButton("OK", (dialog, which) -> result.confirm())
                     .setNegativeButton("Cancel", (dialog, which) -> result.cancel())
-                    .setCancelable(false)
+                    .setOnCancelListener(dialog -> result.cancel())
                     .show();
                 return true;
             }
