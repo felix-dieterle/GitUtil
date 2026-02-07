@@ -701,49 +701,72 @@ Nodes.rollbackBtn.onclick=async()=>{
 if(!WidgetState.picked)return;
 if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`))return;
 hideMsg(Nodes.rollbackMsg);
+console.log('[ROLLBACK] ========================================');
+console.log('[ROLLBACK] User confirmed rollback operation');
+console.log('[ROLLBACK] Target commit:', WidgetState.picked);
+console.log('[ROLLBACK] Repository:', WidgetState.loc);
+console.log('[ROLLBACK] ========================================');
+showMsg(Nodes.rollbackMsg,'⏳ Initiating rollback operation...','info');
 setBusy(Nodes.rollbackBtn,true);
-console.log(`[GitUtil] Starting rollback to commit: ${WidgetState.picked}`);
-console.log(`[GitUtil] Repository path: ${WidgetState.loc}`);
 try{
+console.log('[ROLLBACK] Calling wrapper: apply-rollback');
+console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked]);
 const res=await callWrapper('apply-rollback',[WidgetState.loc,WidgetState.picked]);
-console.log('[GitUtil] Rollback response:', res);
+console.log('[ROLLBACK] Wrapper execution completed');
+console.log('[ROLLBACK] Response object:', JSON.stringify(res,null,2));
+console.log('[ROLLBACK] Response success flag:', res.success);
+console.log('[ROLLBACK] Response exit code:', res.exit_code);
+console.log('[ROLLBACK] Response output:', res.output);
+console.log('[ROLLBACK] Response errors:', res.errors);
 if(res.success&&res.output.includes('SUCCESS')){
-console.log('[GitUtil] Rollback completed successfully');
+console.log('[ROLLBACK] ✓ Rollback completed successfully');
+console.log('[ROLLBACK] New HEAD is now at:', WidgetState.picked.substring(0,8));
 showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
+console.log('[ROLLBACK] Refreshing timeline in 1.5 seconds...');
 setTimeout(async()=>{
+console.log('[ROLLBACK] Fetching updated timeline...');
 const refresh=await callWrapper('pull-timeline',[WidgetState.loc]);
 if(refresh.success){
+console.log('[ROLLBACK] Timeline refreshed successfully');
 WidgetState.snapshots=parseSnapshots(refresh.output);
 renderSnapshots(WidgetState.snapshots);
+}else{
+console.warn('[ROLLBACK] Timeline refresh failed:', refresh);
 }
 },1500);
 }else{
+console.error('[ROLLBACK] ❌ Rollback operation failed');
 // Build detailed error message
 let errorDetails='';
 if(res.errors){
 errorDetails+=res.errors;
-console.error('[GitUtil] Error details:', res.errors);
+console.error('[ROLLBACK] Error details from stderr:', res.errors);
 }
 if(res.output&&!res.output.includes('SUCCESS')){
 if(errorDetails)errorDetails+='\n';
 errorDetails+=res.output;
-console.error('[GitUtil] Output:', res.output);
+console.error('[ROLLBACK] Output from stdout:', res.output);
 }
 if(!errorDetails){
 errorDetails='Unknown error occurred. Check logs for details.';
+console.error('[ROLLBACK] No error details available');
 }
-console.error('[GitUtil] Rollback failed:', errorDetails);
+console.error('[ROLLBACK] Combined error message:', errorDetails);
 const displayMsg=`❌ Rollback failed\n\n${errorDetails}\n\nTip: Use "View Logs" button to see detailed error information.`;
 showMsg(Nodes.rollbackMsg,displayMsg.replace(/\n/g,'<br>'),'bad');
 }
 }catch(e){
-console.error('[GitUtil] Rollback exception:', e);
-console.error('[GitUtil] Exception stack:', e.stack);
+console.error('[ROLLBACK] ❌ Exception occurred during rollback');
+console.error('[ROLLBACK] Exception name:', e.name);
+console.error('[ROLLBACK] Exception message:', e.message);
+console.error('[ROLLBACK] Exception stack trace:', e.stack);
 const displayMsg=`❌ Error during rollback\n\n${e.message}\n\nTip: Use "View Logs" button to see detailed error information.`;
 showMsg(Nodes.rollbackMsg,displayMsg.replace(/\n/g,'<br>'),'bad');
 }finally{
 setBusy(Nodes.rollbackBtn,false);
-console.log('[GitUtil] Rollback operation completed (success or failure)');
+console.log('[ROLLBACK] ========================================');
+console.log('[ROLLBACK] Rollback operation completed');
+console.log('[ROLLBACK] ========================================');
 }
 };
 

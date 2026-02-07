@@ -117,26 +117,54 @@ public class GitBridge {
     }
 
     private String applyRollback(String path, String commitHash) {
-        Log.i(TAG, "Starting rollback to commit: " + commitHash + " in path: " + path);
+        // Create SimpleDateFormat locally to ensure thread safety
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        
+        Log.i(TAG, "========================================");
+        Log.i(TAG, "Apply Rollback Operation Started");
+        Log.i(TAG, "========================================");
+        Log.i(TAG, "Timestamp: " + dateFormat.format(new Date()));
+        Log.i(TAG, "Repository Path: " + path);
+        Log.i(TAG, "Target Commit: " + commitHash);
+        
         try (Repository repository = openRepository(path)) {
+            Log.i(TAG, "Repository opened successfully");
+            
             try (Git git = new Git(repository)) {
+                Log.i(TAG, "Verifying commit exists in repository...");
                 ObjectId commitId = repository.resolve(commitHash);
                 if (commitId == null) {
-                    Log.e(TAG, "Commit not found: " + commitHash);
+                    Log.e(TAG, "ERROR: Commit verification failed");
+                    Log.e(TAG, "Commit " + commitHash + " not found in this repository");
                     return createErrorResponse("ROLLBACK_FAILED\nCommit not found: " + commitHash);
                 }
+                Log.i(TAG, "✓ Commit " + commitHash + " verified");
                 
-                Log.i(TAG, "Performing hard reset to: " + commitHash);
+                // Get current HEAD for reference
+                ObjectId currentHead = repository.resolve("HEAD");
+                Log.i(TAG, "Current HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
+                
+                Log.i(TAG, "Executing hard reset to: " + commitHash);
                 git.reset()
                     .setMode(ResetCommand.ResetType.HARD)
                     .setRef(commitHash)
                     .call();
                 
-                Log.i(TAG, "Rollback completed successfully");
+                // Get new HEAD
+                ObjectId newHead = repository.resolve("HEAD");
+                Log.i(TAG, "✓ Rollback successful");
+                Log.i(TAG, "Previous HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
+                Log.i(TAG, "New HEAD: " + (newHead != null ? newHead.getName() : "unknown"));
+                Log.i(TAG, "========================================");
+                
                 return createSuccessResponse("ROLLBACK_SUCCESS: " + commitHash);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error applying rollback to " + commitHash, e);
+            Log.e(TAG, "❌ Rollback failed");
+            Log.e(TAG, "Exception type: " + e.getClass().getName());
+            Log.e(TAG, "Exception message: " + (e.getMessage() != null ? e.getMessage() : "null"));
+            Log.e(TAG, "========================================");
+            
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return createErrorResponse("ROLLBACK_FAILED\n" + errorMsg);
         }

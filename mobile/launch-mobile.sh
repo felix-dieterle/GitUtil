@@ -43,26 +43,70 @@ cat > "${WRAPPER_DIR}/apply-rollback.sh" << 'WRAPPER_END'
 #!/bin/bash
 LOCATION_PATH="$1"
 TARGET_HASH="$2"
+
+echo "[WRAPPER] ========================================"
+echo "[WRAPPER] Apply Rollback Wrapper Started"
+echo "[WRAPPER] ========================================"
+echo "[WRAPPER] Timestamp: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+echo "[WRAPPER] Repository Path: ${LOCATION_PATH}"
+echo "[WRAPPER] Target Commit: ${TARGET_HASH}"
+
 if [[ -z "${LOCATION_PATH}" || -z "${TARGET_HASH}" ]]; then
-    echo "ERROR: Missing parameters"
+    echo "[WRAPPER] ERROR: Missing required parameters"
+    echo "ERROR: Missing parameters (path or commit hash)"
     exit 1
 fi
+
+echo "[WRAPPER] Validating repository location..."
 if [[ ! -d "${LOCATION_PATH}/.git" ]]; then
-    echo "ERROR: Invalid repository location"
+    echo "[WRAPPER] ERROR: Repository validation failed"
+    echo "[WRAPPER] Path does not contain a .git directory"
+    echo "ERROR: Invalid repository location: ${LOCATION_PATH}"
     exit 1
 fi
-cd "${LOCATION_PATH}" || exit 1
-echo "Rolling back to: ${TARGET_HASH}"
+echo "[WRAPPER] ✓ Repository location is valid"
+
+echo "[WRAPPER] Changing to repository directory..."
+cd "${LOCATION_PATH}" || {
+    echo "[WRAPPER] ERROR: Failed to change directory"
+    echo "ERROR: Could not access repository directory"
+    exit 1
+}
+echo "[WRAPPER] ✓ Working directory: $(pwd)"
+
+echo "[WRAPPER] Verifying commit exists in repository..."
 if ! git rev-parse --verify "${TARGET_HASH}" >/dev/null 2>&1; then
+    echo "[WRAPPER] ERROR: Commit verification failed"
+    echo "[WRAPPER] Commit ${TARGET_HASH} not found in this repository"
     echo "ROLLBACK_FAILED"
     echo "ERROR: Commit ${TARGET_HASH} not found in repository"
     exit 1
 fi
+echo "[WRAPPER] ✓ Commit ${TARGET_HASH} verified"
+
+echo "[WRAPPER] Getting current HEAD for reference..."
+current_head=$(git rev-parse HEAD 2>&1)
+echo "[WRAPPER] Current HEAD: ${current_head}"
+
+echo "[WRAPPER] Executing git reset --hard ${TARGET_HASH}..."
 output=$(git reset --hard "${TARGET_HASH}" 2>&1)
-if [[ $? -eq 0 ]]; then
+exit_code=$?
+
+echo "[WRAPPER] Git reset exit code: ${exit_code}"
+echo "[WRAPPER] Git reset output: ${output}"
+
+if [[ ${exit_code} -eq 0 ]]; then
+    new_head=$(git rev-parse HEAD 2>&1)
+    echo "[WRAPPER] ✓ Rollback successful"
+    echo "[WRAPPER] Previous HEAD: ${current_head}"
+    echo "[WRAPPER] New HEAD: ${new_head}"
+    echo "[WRAPPER] ========================================"
     echo "ROLLBACK_SUCCESS: ${TARGET_HASH}"
     exit 0
 else
+    echo "[WRAPPER] ❌ Rollback failed"
+    echo "[WRAPPER] Git error output: ${output}"
+    echo "[WRAPPER] ========================================"
     echo "ROLLBACK_FAILED"
     echo "ERROR: git reset command failed: ${output}"
     exit 1
