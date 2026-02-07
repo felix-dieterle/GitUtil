@@ -79,8 +79,11 @@ class WrapperBridgeHTTP(BaseHTTPRequestHandler):
                     timeout=30
                 )
                 
+                # Determine success based on exit code
+                is_success = proc.returncode == 0
+                
                 self.respond_with_cors(200, {
-                    'success': True,
+                    'success': is_success,
                     'output': proc.stdout,
                     'errors': proc.stderr,
                     'exit_code': proc.returncode
