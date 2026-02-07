@@ -447,10 +447,12 @@ card.innerHTML=`
 <span class="meta-piece">⏰ ${s.when}</span>
 </div>`;
 card.onclick=()=>{
+console.log('[UI] Commit selected for rollback:', s.short, '-', s.title);
 WidgetState.picked=s.hash;
 document.querySelectorAll('.snapshot-card').forEach(c=>c.classList.remove('active-pick'));
 card.classList.add('active-pick');
 Nodes.rollbackBtn.classList.remove('btn-locked');
+console.log('[UI] Apply Rollback button is now enabled');
 };
 Nodes.snapshotList.appendChild(card);
 });
@@ -493,22 +495,28 @@ Nodes.githubRepoList.appendChild(card);
 };
 
 const loadRepository=async(path)=>{
+console.log('[UI] Loading repository:', path);
 hideMsg(Nodes.repoMsg);
 const checkRes=await callWrapper('check-location',[path]);
 if(!checkRes.success||!checkRes.output.includes('VALID')){
+console.error('[UI] Repository validation failed:', path);
 showMsg(Nodes.repoMsg,'Invalid repository','bad');
 return;
 }
+console.log('[UI] Repository validated successfully');
 WidgetState.loc=path;
 const timelineRes=await callWrapper('pull-timeline',[path]);
 if(timelineRes.success){
 WidgetState.snapshots=parseSnapshots(timelineRes.output);
+console.log('[UI] Loaded', WidgetState.snapshots.length, 'commits from repository');
 Nodes.pathDisplay.textContent=`Repository: ${path.split('/').pop()}`;
 renderSnapshots(WidgetState.snapshots);
 switchView(Nodes.timelineViewer);
 hideMsg(Nodes.rollbackMsg);
 localStorage.setItem('gitutil_last_loc',path);
+console.log('[UI] Timeline viewer is now active - please select a commit to enable rollback');
 }else{
+console.error('[UI] Failed to load timeline from repository');
 showMsg(Nodes.repoMsg,'Failed to load commits','bad');
 }
 };
@@ -698,8 +706,17 @@ switchView(Nodes.repoSelector);
 
 // Rollback button
 Nodes.rollbackBtn.onclick=async()=>{
-if(!WidgetState.picked)return;
-if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`))return;
+console.log('[ROLLBACK] Apply Rollback button clicked');
+if(!WidgetState.picked){
+console.warn('[ROLLBACK] No commit selected - rollback cancelled');
+showMsg(Nodes.rollbackMsg,'⚠️ Please select a commit first','alert');
+return;
+}
+console.log('[ROLLBACK] Commit selected:', WidgetState.picked);
+if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,8)} will reset your branch.\nUncommitted changes will be lost.\n\nProceed?`)){
+console.log('[ROLLBACK] User cancelled rollback at confirmation dialog');
+return;
+}
 hideMsg(Nodes.rollbackMsg);
 console.log('[ROLLBACK] ========================================');
 console.log('[ROLLBACK] User confirmed rollback operation');
@@ -826,18 +843,31 @@ Nodes.cloneUrlBox.onkeypress=(e)=>{if(e.key==='Enter')Nodes.cloneConfirmBtn.clic
 
 // Initialize on load
 window.onload=async()=>{
+console.log('[INIT] ========================================');
+console.log('[INIT] GitUtil Mobile starting...');
+console.log('[INIT] Version: 1.0');
+console.log('[INIT] Timestamp:', new Date().toISOString());
+console.log('[INIT] ========================================');
 await initWorkspace();
 // Auto-load last repository if it exists in workspace
 const saved=localStorage.getItem('gitutil_last_loc');
 if(saved){
+console.log('[INIT] Found saved repository path:', saved);
 // Check if the saved path exists in the workspace repos
 const repoExists=WidgetState.repos.some(r=>r.path===saved);
 if(repoExists){
+console.log('[INIT] Auto-loading saved repository...');
 loadRepository(saved);
+}else{
+console.log('[INIT] Saved repository not in workspace - showing repository selector');
 }
 // If not in workspace, we still show the repository selector
 // User can use "Custom Path" to access it
+}else{
+console.log('[INIT] No saved repository - showing repository selector');
 }
+console.log('[INIT] Application initialized successfully');
+console.log('[INIT] Tip: Use "📋 View Logs" button to see all application logs');
 };
 </script>
 </body>
