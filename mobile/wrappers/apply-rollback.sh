@@ -16,12 +16,12 @@ if ! git rev-parse --verify "${TARGET_HASH}" >/dev/null 2>&1; then
     echo "ERROR: Commit ${TARGET_HASH} not found in repository"
     exit 1
 fi
-git reset --hard "${TARGET_HASH}" 2>&1
+output=$(git reset --hard "${TARGET_HASH}" 2>&1)
 if [[ $? -eq 0 ]]; then
     echo "ROLLBACK_SUCCESS: ${TARGET_HASH}"
     exit 0
 else
     echo "ROLLBACK_FAILED"
-    echo "ERROR: git reset command failed"
+    echo "ERROR: git reset command failed: ${output}"
     exit 1
 fi
