@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -159,6 +161,22 @@ public class GitUtilActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 // Keep navigation within WebView
                 return false;
+            }
+        });
+        
+        // Set WebChromeClient to handle JavaScript dialogs (alert, confirm, prompt)
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                // Show a native Android dialog for JavaScript confirm()
+                new AlertDialog.Builder(GitUtilActivity.this)
+                    .setTitle("Confirm")
+                    .setMessage(message)
+                    .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                    .setNegativeButton("Cancel", (dialog, which) -> result.cancel())
+                    .setCancelable(false)
+                    .show();
+                return true;
             }
         });
 
