@@ -496,7 +496,8 @@ Nodes.githubRepoList.appendChild(card);
 
 const loadRepository=async(path)=>{
 console.log('[UI] Loading repository:', path);
-hideMsg(Nodes.repoMsg);
+showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repository...','info');
+try{
 const checkRes=await callWrapper('check-location',[path]);
 if(!checkRes.success||!checkRes.output.includes('VALID')){
 console.error('[UI] Repository validation failed:', path);
@@ -519,17 +520,27 @@ console.log('[UI] Timeline viewer is now active - please select a commit to enab
 console.error('[UI] Failed to load timeline from repository');
 showMsg(Nodes.repoMsg,'Failed to load commits','bad');
 }
+}finally{
+hideMsg(Nodes.repoMsg);
+}
 };
 
 const refreshRepoList=async()=>{
+showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repositories...','info');
+try{
 const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
 if(listRes.success){
 WidgetState.repos=parseRepos(listRes.output);
 renderRepos(WidgetState.repos);
 }
+}finally{
+hideMsg(Nodes.repoMsg);
+}
 };
 
 const initWorkspace=async()=>{
+showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Initializing workspace...','info');
+try{
 const wsRes=await callWrapper('ensure-workspace',[]);
 if(wsRes.success){
 const match=wsRes.output.match(/:(.*)/);
@@ -540,6 +551,9 @@ await refreshRepoList();
 }
 }else{
 showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
+}
+}finally{
+hideMsg(Nodes.repoMsg);
 }
 };
 
@@ -594,7 +608,7 @@ switchView(Nodes.repoSelector);
 // Clone GitHub repository
 const cloneGitHubRepo=async(url,name)=>{
 hideMsg(Nodes.githubBrowserMsg);
-showMsg(Nodes.githubBrowserMsg,`Cloning ${name}...`,'info');
+showMsg(Nodes.githubBrowserMsg,`<span class="spin-wheel"></span> Cloning ${name}...`,'info');
 try{
 const cloneRes=await callWrapper('clone-repository',[url,name]);
 if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
