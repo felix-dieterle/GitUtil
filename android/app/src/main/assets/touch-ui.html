@@ -516,31 +516,30 @@ switchView(Nodes.timelineViewer);
 hideMsg(Nodes.rollbackMsg);
 localStorage.setItem('gitutil_last_loc',path);
 console.log('[UI] Timeline viewer is now active - please select a commit to enable rollback');
+hideMsg(Nodes.repoMsg);
 }else{
 console.error('[UI] Failed to load timeline from repository');
 showMsg(Nodes.repoMsg,'Failed to load commits','bad');
 }
-}finally{
-hideMsg(Nodes.repoMsg);
+}catch(e){
+showMsg(Nodes.repoMsg,`Error: ${e.message}`,'bad');
 }
 };
 
 const refreshRepoList=async()=>{
 showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repositories...','info');
-try{
 const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
 if(listRes.success){
 WidgetState.repos=parseRepos(listRes.output);
 renderRepos(WidgetState.repos);
-}
-}finally{
 hideMsg(Nodes.repoMsg);
+}else{
+showMsg(Nodes.repoMsg,'Failed to load repositories','bad');
 }
 };
 
 const initWorkspace=async()=>{
 showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Initializing workspace...','info');
-try{
 const wsRes=await callWrapper('ensure-workspace',[]);
 if(wsRes.success){
 const match=wsRes.output.match(/:(.*)/);
@@ -551,9 +550,6 @@ await refreshRepoList();
 }
 }else{
 showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
-}
-}finally{
-hideMsg(Nodes.repoMsg);
 }
 };
 
