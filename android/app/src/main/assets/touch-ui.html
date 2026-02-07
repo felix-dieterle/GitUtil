@@ -259,6 +259,12 @@ switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg')
 };
 
+const escapeHtml=(text)=>{
+const div=document.createElement('div');
+div.textContent=text;
+return div.innerHTML;
+};
+
 const showMsg=(target,txt,kind)=>{
 target.innerHTML=`<div class="notice-bar notice-${kind}">${txt}</div>`;
 };
@@ -340,11 +346,11 @@ return blocks.map(b=>{
 const lines=b.split('\n');
 const repo={};
 lines.forEach(ln=>{
-if(ln.startsWith('GITHUB_REPO_NAME:'))repo.name=ln.substring(17).trim();
-if(ln.startsWith('GITHUB_REPO_FULLNAME:'))repo.fullName=ln.substring(21).trim();
-if(ln.startsWith('GITHUB_REPO_URL:'))repo.url=ln.substring(16).trim();
-if(ln.startsWith('GITHUB_REPO_DESC:'))repo.description=ln.substring(17).trim();
-if(ln.startsWith('GITHUB_REPO_PRIVATE:'))repo.isPrivate=ln.substring(20).trim()==='true';
+if(ln.startsWith('GITHUB_REPO_NAME:'))repo.name=ln.substring('GITHUB_REPO_NAME:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_FULLNAME:'))repo.fullName=ln.substring('GITHUB_REPO_FULLNAME:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_URL:'))repo.url=ln.substring('GITHUB_REPO_URL:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_DESC:'))repo.description=ln.substring('GITHUB_REPO_DESC:'.length).trim();
+if(ln.startsWith('GITHUB_REPO_PRIVATE:'))repo.isPrivate=ln.substring('GITHUB_REPO_PRIVATE:'.length).trim()==='true';
 });
 return repo;
 }).filter(r=>r.name&&r.url);
@@ -362,9 +368,9 @@ card.className='snapshot-card';
 card.dataset.hash=s.hash;
 card.innerHTML=`
 <div class="snapshot-card__hash">${s.short}</div>
-<div class="snapshot-card__msg">${s.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+<div class="snapshot-card__msg">${escapeHtml(s.title)}</div>
 <div class="snapshot-card__meta">
-<span class="meta-piece">👤 ${s.who.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+<span class="meta-piece">👤 ${escapeHtml(s.who)}</span>
 <span class="meta-piece">⏰ ${s.when}</span>
 </div>`;
 card.onclick=()=>{
@@ -387,8 +393,8 @@ repos.forEach(r=>{
 const card=document.createElement('div');
 card.className='repo-card';
 card.innerHTML=`
-<div class="repo-card__name">📁 ${r.name.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-<div class="repo-card__path">${r.path.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+<div class="repo-card__name">📁 ${escapeHtml(r.name)}</div>
+<div class="repo-card__path">${escapeHtml(r.path)}</div>`;
 card.onclick=()=>loadRepository(r.path);
 Nodes.repoList.appendChild(card);
 });
@@ -404,9 +410,9 @@ repos.forEach(r=>{
 const card=document.createElement('div');
 card.className='repo-card';
 const privacyIcon=r.isPrivate?'🔒':'📂';
-const desc=r.description?`<div class="repo-card__path">${r.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`:'';
+const desc=r.description?`<div class="repo-card__path">${escapeHtml(r.description)}</div>`:'';
 card.innerHTML=`
-<div class="repo-card__name">${privacyIcon} ${r.fullName.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+<div class="repo-card__name">${privacyIcon} ${escapeHtml(r.fullName)}</div>
 ${desc}`;
 card.onclick=()=>cloneGitHubRepo(r.url,r.name);
 Nodes.githubRepoList.appendChild(card);

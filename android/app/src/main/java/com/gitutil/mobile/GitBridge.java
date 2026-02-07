@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -270,30 +271,31 @@ public class GitBridge {
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 200) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-                reader.close();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
 
-                // Parse JSON response
-                JSONArray repos = new JSONArray(response.toString());
-                for (int i = 0; i < repos.length(); i++) {
-                    JSONObject repo = repos.getJSONObject(i);
-                    String repoName = repo.getString("name");
-                    String repoFullName = repo.getString("full_name");
-                    String cloneUrl = repo.getString("clone_url");
-                    String description = repo.optString("description", "");
-                    boolean isPrivate = repo.getBoolean("private");
+                    // Parse JSON response
+                    JSONArray repos = new JSONArray(response.toString());
+                    for (int i = 0; i < repos.length(); i++) {
+                        JSONObject repo = repos.getJSONObject(i);
+                        String repoName = repo.getString("name");
+                        String repoFullName = repo.getString("full_name");
+                        String cloneUrl = repo.getString("clone_url");
+                        String description = repo.optString("description", "");
+                        boolean isPrivate = repo.getBoolean("private");
 
-                    output.append("GITHUB_REPO_NAME:").append(repoName).append("\n");
-                    output.append("GITHUB_REPO_FULLNAME:").append(repoFullName).append("\n");
-                    output.append("GITHUB_REPO_URL:").append(cloneUrl).append("\n");
-                    output.append("GITHUB_REPO_DESC:").append(description).append("\n");
-                    output.append("GITHUB_REPO_PRIVATE:").append(isPrivate).append("\n");
-                    output.append("GITHUB_REPO_SEPARATOR\n");
+                        output.append("GITHUB_REPO_NAME:").append(repoName).append("\n");
+                        output.append("GITHUB_REPO_FULLNAME:").append(repoFullName).append("\n");
+                        output.append("GITHUB_REPO_URL:").append(cloneUrl).append("\n");
+                        output.append("GITHUB_REPO_DESC:").append(description).append("\n");
+                        output.append("GITHUB_REPO_PRIVATE:").append(isPrivate).append("\n");
+                        output.append("GITHUB_REPO_SEPARATOR\n");
+                    }
                 }
             } else if (responseCode == 401) {
                 return createErrorResponse("Invalid GitHub token. Please check your token and try again.");

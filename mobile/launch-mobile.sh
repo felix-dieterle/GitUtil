@@ -182,7 +182,7 @@ try:
         print('GITHUB_REPO_PRIVATE:' + str(repo['private']).lower())
         print('GITHUB_REPO_SEPARATOR')
 except Exception as e:
-    print('ERROR: Failed to parse response', file=sys.stderr)
+    print(f'ERROR: Failed to parse response: {e}', file=sys.stderr)
     sys.exit(1)
 "
 
