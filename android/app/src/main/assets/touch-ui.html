@@ -117,11 +117,51 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 <div id="workspaceInfo" class="notice-bar notice-info"></div>
 <div id="repoList" class="repo-list-zone"></div>
 <div class="btn-row">
-<button id="cloneBtn" class="action-btn btn-success">📦 Clone Repository</button>
+<button id="githubBtn" class="action-btn btn-primary">🌐 Browse GitHub</button>
+<button id="cloneBtn" class="action-btn btn-success">📦 Clone URL</button>
+</div>
+<div class="btn-row">
 <button id="browseBtn" class="action-btn btn-neutral">📂 Custom Path</button>
 </div>
 </div>
 <div id="repoMsg"></div>
+</div>
+
+<!-- GitHub Authentication View -->
+<div id="githubAuthView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">GitHub Authentication</h2>
+<div class="notice-bar notice-info">
+Enter your GitHub Personal Access Token to browse and clone your repositories.
+<br><br>
+<strong>How to get a token:</strong><br>
+1. Go to GitHub Settings → Developer settings → Personal access tokens<br>
+2. Generate new token (classic)<br>
+3. Select 'repo' scope<br>
+4. Copy the token
+</div>
+<div class="input-zone">
+<label class="input-zone__label">GitHub Token</label>
+<input type="password" id="githubTokenBox" class="text-box" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+</div>
+<div class="btn-row">
+<button id="githubAuthBtn" class="action-btn btn-primary">Connect to GitHub</button>
+<button id="githubAuthCancelBtn" class="action-btn btn-neutral">Cancel</button>
+</div>
+</div>
+<div id="githubAuthMsg"></div>
+</div>
+
+<!-- GitHub Repository Browser View -->
+<div id="githubBrowserView" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">GitHub Repositories</h2>
+<div id="githubRepoList" class="repo-list-zone"></div>
+<div class="btn-row">
+<button id="githubBackBtn" class="action-btn btn-neutral">Back</button>
+</div>
+</div>
+<div id="githubBrowserMsg"></div>
 </div>
 
 <!-- Clone Repository View -->
@@ -176,15 +216,27 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 </main>
 </div>
 <script>
-const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[]};
+const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[],githubToken:'',githubRepos:[]};
 const Nodes={
 // Repo selector
 repoSelector:document.getElementById('repoSelector'),
 workspaceInfo:document.getElementById('workspaceInfo'),
 repoList:document.getElementById('repoList'),
+githubBtn:document.getElementById('githubBtn'),
 cloneBtn:document.getElementById('cloneBtn'),
 browseBtn:document.getElementById('browseBtn'),
 repoMsg:document.getElementById('repoMsg'),
+// GitHub auth view
+githubAuthView:document.getElementById('githubAuthView'),
+githubTokenBox:document.getElementById('githubTokenBox'),
+githubAuthBtn:document.getElementById('githubAuthBtn'),
+githubAuthCancelBtn:document.getElementById('githubAuthCancelBtn'),
+githubAuthMsg:document.getElementById('githubAuthMsg'),
+// GitHub browser view
+githubBrowserView:document.getElementById('githubBrowserView'),
+githubRepoList:document.getElementById('githubRepoList'),
+githubBackBtn:document.getElementById('githubBackBtn'),
+githubBrowserMsg:document.getElementById('githubBrowserMsg'),
 // Clone view
 cloneView:document.getElementById('cloneView'),
 cloneUrlBox:document.getElementById('cloneUrlBox'),
@@ -213,6 +265,8 @@ target.innerHTML=`<div class="notice-bar notice-${kind}">${txt}</div>`;
 const hideMsg=(target)=>{target.innerHTML='';};
 const switchView=(view)=>{
 Nodes.repoSelector.classList.add('screen-off');
+Nodes.githubAuthView.classList.add('screen-off');
+Nodes.githubBrowserView.classList.add('screen-off');
 Nodes.cloneView.classList.add('screen-off');
 Nodes.customPathView.classList.add('screen-off');
 Nodes.timelineViewer.classList.add('screen-off');
@@ -280,6 +334,22 @@ return repo;
 }).filter(r=>r.name&&r.path);
 };
 
+const parseGitHubRepos=(raw)=>{
+const blocks=raw.split('GITHUB_REPO_SEPARATOR').filter(b=>b.trim()&&b.includes('GITHUB_REPO_NAME'));
+return blocks.map(b=>{
+const lines=b.split('\n');
+const repo={};
+lines.forEach(ln=>{
+if(ln.startsWith('GITHUB_REPO_NAME:'))repo.name=ln.substring(17).trim();
+if(ln.startsWith('GITHUB_REPO_FULLNAME:'))repo.fullName=ln.substring(21).trim();
+if(ln.startsWith('GITHUB_REPO_URL:'))repo.url=ln.substring(16).trim();
+if(ln.startsWith('GITHUB_REPO_DESC:'))repo.description=ln.substring(17).trim();
+if(ln.startsWith('GITHUB_REPO_PRIVATE:'))repo.isPrivate=ln.substring(20).trim()==='true';
+});
+return repo;
+}).filter(r=>r.name&&r.url);
+};
+
 const renderSnapshots=(snaps)=>{
 Nodes.snapshotList.innerHTML='';
 if(snaps.length===0){
@@ -324,6 +394,25 @@ Nodes.repoList.appendChild(card);
 });
 };
 
+const renderGitHubRepos=(repos)=>{
+Nodes.githubRepoList.innerHTML='';
+if(repos.length===0){
+Nodes.githubRepoList.innerHTML='<div class="void-box"><div class="void-box__icon">🌐</div><div>No repositories found</div></div>';
+return;
+}
+repos.forEach(r=>{
+const card=document.createElement('div');
+card.className='repo-card';
+const privacyIcon=r.isPrivate?'🔒':'📂';
+const desc=r.description?`<div class="repo-card__path">${r.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`:'';
+card.innerHTML=`
+<div class="repo-card__name">${privacyIcon} ${r.fullName.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+${desc}`;
+card.onclick=()=>cloneGitHubRepo(r.url,r.name);
+Nodes.githubRepoList.appendChild(card);
+});
+};
+
 const loadRepository=async(path)=>{
 hideMsg(Nodes.repoMsg);
 const checkRes=await callWrapper('check-location',[path]);
@@ -364,6 +453,78 @@ await refreshRepoList();
 }
 }else{
 showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
+}
+};
+
+// GitHub button
+Nodes.githubBtn.onclick=()=>{
+hideMsg(Nodes.githubAuthMsg);
+const savedToken=localStorage.getItem('gitutil_github_token');
+if(savedToken){
+Nodes.githubTokenBox.value=savedToken;
+}
+switchView(Nodes.githubAuthView);
+};
+
+// GitHub auth button
+Nodes.githubAuthBtn.onclick=async()=>{
+const token=Nodes.githubTokenBox.value.trim();
+if(!token){
+showMsg(Nodes.githubAuthMsg,'Please enter your GitHub token','bad');
+return;
+}
+hideMsg(Nodes.githubAuthMsg);
+setBusy(Nodes.githubAuthBtn,true);
+try{
+const listRes=await callWrapper('list-github-repos',[token]);
+if(listRes.success&&listRes.output.includes('GITHUB_REPOS_BEGIN')){
+WidgetState.githubToken=token;
+WidgetState.githubRepos=parseGitHubRepos(listRes.output);
+localStorage.setItem('gitutil_github_token',token);
+renderGitHubRepos(WidgetState.githubRepos);
+switchView(Nodes.githubBrowserView);
+hideMsg(Nodes.githubBrowserMsg);
+}else{
+showMsg(Nodes.githubAuthMsg,listRes.output||'Failed to connect to GitHub','bad');
+}
+}catch(e){
+showMsg(Nodes.githubAuthMsg,`Error: ${e.message}`,'bad');
+}finally{
+setBusy(Nodes.githubAuthBtn,false);
+}
+};
+
+// GitHub auth cancel
+Nodes.githubAuthCancelBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// GitHub back button
+Nodes.githubBackBtn.onclick=()=>{
+switchView(Nodes.repoSelector);
+};
+
+// Clone GitHub repository
+const cloneGitHubRepo=async(url,name)=>{
+hideMsg(Nodes.githubBrowserMsg);
+showMsg(Nodes.githubBrowserMsg,`Cloning ${name}...`,'info');
+try{
+const cloneRes=await callWrapper('clone-repository',[url,name]);
+if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
+const match=cloneRes.output.match(/:(.*)/);
+if(match){
+const repoPath=match[1].trim();
+showMsg(Nodes.githubBrowserMsg,'✓ Repository cloned successfully','good');
+setTimeout(async()=>{
+await refreshRepoList();
+loadRepository(repoPath);
+},1500);
+}
+}else{
+showMsg(Nodes.githubBrowserMsg,cloneRes.output||'Clone failed','bad');
+}
+}catch(e){
+showMsg(Nodes.githubBrowserMsg,`Error: ${e.message}`,'bad');
 }
 };
 

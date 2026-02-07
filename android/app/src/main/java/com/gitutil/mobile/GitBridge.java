@@ -13,7 +13,11 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -46,6 +50,8 @@ public class GitBridge {
                     return listRepositories(args.length() > 0 ? args.getString(0) : DEFAULT_WORKSPACE_PATH);
                 case "clone-repository":
                     return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null);
+                case "list-github-repos":
+                    return listGitHubRepositories(args.getString(0));
                 default:
                     return createErrorResponse("Unknown wrapper: " + wrapperName);
             }
@@ -243,6 +249,64 @@ public class GitBridge {
         // Remove any invalid characters
         name = name.replaceAll("[^a-zA-Z0-9._-]", "_");
         return name;
+    }
+
+    /**
+     * List GitHub repositories using personal access token
+     */
+    private String listGitHubRepositories(String token) {
+        try {
+            StringBuilder output = new StringBuilder();
+            output.append("GITHUB_REPOS_BEGIN\n");
+
+            // GitHub API endpoint for user repositories
+            URL url = new URL("https://api.github.com/user/repos?per_page=100&sort=updated");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "token " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                // Parse JSON response
+                JSONArray repos = new JSONArray(response.toString());
+                for (int i = 0; i < repos.length(); i++) {
+                    JSONObject repo = repos.getJSONObject(i);
+                    String repoName = repo.getString("name");
+                    String repoFullName = repo.getString("full_name");
+                    String cloneUrl = repo.getString("clone_url");
+                    String description = repo.optString("description", "");
+                    boolean isPrivate = repo.getBoolean("private");
+
+                    output.append("GITHUB_REPO_NAME:").append(repoName).append("\n");
+                    output.append("GITHUB_REPO_FULLNAME:").append(repoFullName).append("\n");
+                    output.append("GITHUB_REPO_URL:").append(cloneUrl).append("\n");
+                    output.append("GITHUB_REPO_DESC:").append(description).append("\n");
+                    output.append("GITHUB_REPO_PRIVATE:").append(isPrivate).append("\n");
+                    output.append("GITHUB_REPO_SEPARATOR\n");
+                }
+            } else if (responseCode == 401) {
+                return createErrorResponse("Invalid GitHub token. Please check your token and try again.");
+            } else {
+                return createErrorResponse("GitHub API error: HTTP " + responseCode);
+            }
+
+            output.append("GITHUB_REPOS_END");
+            return createSuccessResponse(output.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing GitHub repositories", e);
+            return createErrorResponse("Error connecting to GitHub: " + e.getMessage());
+        }
     }
 
     private String createSuccessResponse(String output) {
