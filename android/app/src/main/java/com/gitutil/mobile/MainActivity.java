@@ -20,9 +20,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         TextView infoText = findViewById(R.id.infoText);
+        Button launchAppButton = findViewById(R.id.launchAppButton);
         Button installTermuxButton = findViewById(R.id.installTermuxButton);
         Button downloadPackageButton = findViewById(R.id.downloadPackageButton);
         Button viewDocsButton = findViewById(R.id.viewDocsButton);
+
+        // Launch the standalone GitUtil app
+        launchAppButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                launchGitUtil();
+            }
+        });
 
         installTermuxButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -53,6 +62,15 @@ public class MainActivity extends AppCompatActivity {
         if (errorDialog != null && errorDialog.isShowing()) {
             errorDialog.dismiss();
             errorDialog = null;
+        }
+    }
+
+    private void launchGitUtil() {
+        try {
+            Intent intent = new Intent(this, GitUtilActivity.class);
+            startActivity(intent);
+        } catch (Exception e) {
+            showError("Could not launch GitUtil: " + e.getMessage());
         }
     }
 
