@@ -105,34 +105,29 @@ public class GitUtilActivity extends AppCompatActivity {
         waitingForPermissionFromSettings = true;
         
         String message;
+        Intent intent;
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11+
             message = "GitUtil needs All Files Access permission to manage git repositories. " +
                      "Please enable \"Allow access to manage all files\" in the app settings.";
+            intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
         } else {
             // Android 6-10
             message = "GitUtil needs storage access to manage git repositories. " +
                      "Please grant the Storage permission in the app settings.";
+            intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         }
         
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        
+        final Intent settingsIntent = intent;
         new AlertDialog.Builder(this)
             .setTitle("Storage Permission Required")
             .setMessage(message)
             .setPositiveButton("Open Settings", (dialog, which) -> {
-                // Open appropriate settings page based on Android version
-                Intent intent;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    // Android 11+: Open All Files Access settings
-                    intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                    intent.setData(uri);
-                } else {
-                    // Android 6-10: Open app details settings
-                    intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                    intent.setData(uri);
-                }
-                startActivity(intent);
+                startActivity(settingsIntent);
             })
             .setNegativeButton("Cancel", (dialog, which) -> {
                 waitingForPermissionFromSettings = false;
