@@ -101,6 +101,9 @@ background:none;border:none;color:var(--sky-600);text-decoration:underline;
 padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-family:inherit
 }
 .link-btn:active{opacity:0.7}
+.log-error{color:#d62828}
+.log-warn{color:#f77f00}
+.log-info{color:#2e8bc0}
 </style>
 </head>
 <body>
@@ -132,18 +135,13 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 <div class="card">
 <h2 class="card__header">GitHub Authentication</h2>
 <div class="notice-bar notice-info">
-ℹ️ Enter your GitHub Personal Access Token to browse and clone your repositories.
+Enter your GitHub Personal Access Token to browse and clone your repositories.
 <br><br>
 <strong>How to get a token:</strong><br>
 1. Go to GitHub Settings → Developer settings → Personal access tokens<br>
 2. Generate new token (classic)<br>
-3. Select '<strong>repo</strong>' scope - This permission allows GitUtil to:<br>
-   • Read your repository list (public and private)<br>
-   • Clone repositories to your device<br>
+3. Select 'repo' scope<br>
 4. Copy the token
-<br><br>
-🔒 <strong>Security & Privacy:</strong><br>
-Your token is stored only on your device and is used exclusively to communicate with GitHub's API. GitUtil never sends your token to any third-party servers.
 </div>
 <div class="input-zone">
 <label class="input-zone__label">GitHub Token</label>
@@ -215,13 +213,66 @@ Your token is stored only on your device and is used exclusively to communicate 
 <button id="rollbackBtn" class="action-btn btn-danger btn-locked">Apply Rollback</button>
 <button id="switchBtn" class="action-btn btn-neutral">Change Repo</button>
 </div>
+<div class="btn-row">
+<button id="viewLogsBtn" class="action-btn btn-secondary">📋 View Logs</button>
+</div>
 </div>
 <div id="rollbackMsg"></div>
+</div>
+
+<!-- Log Viewer -->
+<div id="logViewer" class="view-mode screen-off">
+<div class="card">
+<h2 class="card__header">Application Logs</h2>
+<div class="notice-bar notice-info">
+Recent console logs from the application
+</div>
+<div id="logContent" class="timeline-zone" style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all;"></div>
+<div class="btn-row">
+<button id="refreshLogsBtn" class="action-btn btn-primary">🔄 Refresh</button>
+<button id="clearLogsBtn" class="action-btn btn-neutral">🗑️ Clear</button>
+<button id="closeLogsBtn" class="action-btn btn-neutral">Back</button>
+</div>
+</div>
 </div>
 </main>
 </div>
 <script>
-const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[],githubToken:'',githubRepos:[]};
+const AppLogs=[];
+const maxLogEntries=500;
+const originalConsole={
+log:console.log,
+error:console.error,
+warn:console.warn,
+info:console.info
+};
+// Override console methods to capture logs
+console.log=function(...args){
+const msg='[LOG] '+args.join(' ');
+AppLogs.push({time:new Date().toISOString(),msg:msg,type:'log'});
+if(AppLogs.length>maxLogEntries)AppLogs.shift();
+originalConsole.log.apply(console,args);
+};
+console.error=function(...args){
+const msg='[ERROR] '+args.join(' ');
+AppLogs.push({time:new Date().toISOString(),msg:msg,type:'error'});
+if(AppLogs.length>maxLogEntries)AppLogs.shift();
+originalConsole.error.apply(console,args);
+};
+console.warn=function(...args){
+const msg='[WARN] '+args.join(' ');
+AppLogs.push({time:new Date().toISOString(),msg:msg,type:'warn'});
+if(AppLogs.length>maxLogEntries)AppLogs.shift();
+originalConsole.warn.apply(console,args);
+};
+console.info=function(...args){
+const msg='[INFO] '+args.join(' ');
+AppLogs.push({time:new Date().toISOString(),msg:msg,type:'info'});
+if(AppLogs.length>maxLogEntries)AppLogs.shift();
+originalConsole.info.apply(console,args);
+};
+
+const WidgetState={loc:'',snapshots:[],picked:null,workspace:'',repos:[],githubToken:'',githubRepos:[],lastView:null};
 const Nodes={
 // Repo selector
 repoSelector:document.getElementById('repoSelector'),
@@ -261,7 +312,14 @@ pathDisplay:document.getElementById('pathDisplay'),
 snapshotList:document.getElementById('snapshotList'),
 rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
-rollbackMsg:document.getElementById('rollbackMsg')
+rollbackMsg:document.getElementById('rollbackMsg'),
+viewLogsBtn:document.getElementById('viewLogsBtn'),
+// Log viewer
+logViewer:document.getElementById('logViewer'),
+logContent:document.getElementById('logContent'),
+refreshLogsBtn:document.getElementById('refreshLogsBtn'),
+clearLogsBtn:document.getElementById('clearLogsBtn'),
+closeLogsBtn:document.getElementById('closeLogsBtn')
 };
 
 const escapeHtml=(text)=>{
@@ -274,13 +332,17 @@ const showMsg=(target,txt,kind)=>{
 target.innerHTML=`<div class="notice-bar notice-${kind}">${txt}</div>`;
 };
 const hideMsg=(target)=>{target.innerHTML='';};
-const switchView=(view)=>{
+const switchView=(view,saveLastView=true)=>{
+if(saveLastView&&view!==Nodes.logViewer){
+WidgetState.lastView=document.querySelector('.view-mode:not(.screen-off)');
+}
 Nodes.repoSelector.classList.add('screen-off');
 Nodes.githubAuthView.classList.add('screen-off');
 Nodes.githubBrowserView.classList.add('screen-off');
 Nodes.cloneView.classList.add('screen-off');
 Nodes.customPathView.classList.add('screen-off');
 Nodes.timelineViewer.classList.add('screen-off');
+Nodes.logViewer.classList.add('screen-off');
 view.classList.remove('screen-off');
 };
 const setBusy=(btn,busy)=>{
@@ -641,6 +703,7 @@ if(!confirm(`⚠️ WARNING\n\nRolling back to ${WidgetState.picked.substring(0,
 hideMsg(Nodes.rollbackMsg);
 setBusy(Nodes.rollbackBtn,true);
 console.log(`[GitUtil] Starting rollback to commit: ${WidgetState.picked}`);
+console.log(`[GitUtil] Repository path: ${WidgetState.loc}`);
 try{
 const res=await callWrapper('apply-rollback',[WidgetState.loc,WidgetState.picked]);
 console.log('[GitUtil] Rollback response:', res);
@@ -655,15 +718,32 @@ renderSnapshots(WidgetState.snapshots);
 }
 },1500);
 }else{
-const errorMsg=res.errors||res.output||'Unknown error occurred';
-console.error('[GitUtil] Rollback failed:', errorMsg);
-showMsg(Nodes.rollbackMsg,`❌ Rollback failed: ${errorMsg}`,'bad');
+// Build detailed error message
+let errorDetails='';
+if(res.errors){
+errorDetails+=res.errors;
+console.error('[GitUtil] Error details:', res.errors);
+}
+if(res.output&&!res.output.includes('SUCCESS')){
+if(errorDetails)errorDetails+='\n';
+errorDetails+=res.output;
+console.error('[GitUtil] Output:', res.output);
+}
+if(!errorDetails){
+errorDetails='Unknown error occurred. Check logs for details.';
+}
+console.error('[GitUtil] Rollback failed:', errorDetails);
+const displayMsg=`❌ Rollback failed\n\n${errorDetails}\n\nTip: Use "View Logs" button to see detailed error information.`;
+showMsg(Nodes.rollbackMsg,displayMsg.replace(/\n/g,'<br>'),'bad');
 }
 }catch(e){
 console.error('[GitUtil] Rollback exception:', e);
-showMsg(Nodes.rollbackMsg,`❌ Error: ${e.message}`,'bad');
+console.error('[GitUtil] Exception stack:', e.stack);
+const displayMsg=`❌ Error during rollback\n\n${e.message}\n\nTip: Use "View Logs" button to see detailed error information.`;
+showMsg(Nodes.rollbackMsg,displayMsg.replace(/\n/g,'<br>'),'bad');
 }finally{
 setBusy(Nodes.rollbackBtn,false);
+console.log('[GitUtil] Rollback operation completed (success or failure)');
 }
 };
 
@@ -672,6 +752,49 @@ Nodes.switchBtn.onclick=()=>{
 WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
 switchView(Nodes.repoSelector);
 refreshRepoList();
+};
+
+// View logs button
+Nodes.viewLogsBtn.onclick=()=>{
+switchView(Nodes.logViewer,true);
+renderLogs();
+};
+
+// Refresh logs button
+Nodes.refreshLogsBtn.onclick=()=>{
+renderLogs();
+};
+
+// Clear logs button
+Nodes.clearLogsBtn.onclick=()=>{
+if(confirm('Clear all application logs?')){
+AppLogs.length=0;
+renderLogs();
+}
+};
+
+// Close logs button
+Nodes.closeLogsBtn.onclick=()=>{
+if(WidgetState.lastView){
+switchView(WidgetState.lastView,false);
+}else{
+switchView(Nodes.timelineViewer,false);
+}
+};
+
+// Function to render logs
+const renderLogs=()=>{
+if(AppLogs.length===0){
+Nodes.logContent.innerHTML='<div class="void-box"><div class="void-box__icon">📋</div><div>No logs yet</div></div>';
+return;
+}
+const logHtml=AppLogs.map(log=>{
+const timeStr=new Date(log.time).toLocaleTimeString();
+const cssClass=log.type==='error'?'log-error':log.type==='warn'?'log-warn':log.type==='info'?'log-info':'';
+return `<div class="${cssClass}">${timeStr} ${escapeHtml(log.msg)}</div>`;
+}).join('');
+Nodes.logContent.innerHTML=logHtml;
+Nodes.logContent.scrollTop=Nodes.logContent.scrollHeight;
 };
 
 // Enter key handlers
