@@ -225,8 +225,12 @@ git add file.txt
 git commit -q -m "Commit 3"
 REMOTE_THIRD=$(git rev-parse HEAD)
 
-# Push to remote
-git push -q origin main 2>/dev/null || git push -q origin master 2>/dev/null
+# Push to remote - try main branch first, then master
+PUSH_OUTPUT=$(git push -q origin main 2>&1 || git push -q origin master 2>&1)
+if [ $? -ne 0 ]; then
+    echo "Test setup error: Failed to push to remote"
+    echo "$PUSH_OUTPUT"
+fi
 
 cd - > /dev/null
 
