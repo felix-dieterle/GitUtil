@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GitUtil Progress Tracker Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--ink-900:#0d1821;--ink-700:#344055;--ink-500:#5f6c7b;--ink-300:#9199a1;
+--sky-600:#1b6ca8;--sky-500:#2e8bc0;
+--grass-600:#2d6a4f;--grass-500:#40916c;
+--fire-600:#d62828;--fire-500:#f77f00;
+--pearl-100:#f1faee;--pearl-50:#ffffff;
+--gap:8px;--curve:12px
+}
+body{
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+background:var(--pearl-100);color:var(--ink-900);line-height:1.5;padding:20px
+}
+.container{max-width:600px;margin:0 auto}
+h1{color:var(--sky-600);margin-bottom:20px}
+.demo-section{margin-bottom:30px}
+.demo-section h2{color:var(--ink-700);margin-bottom:15px;font-size:18px}
+.card{
+background:var(--pearl-50);border-radius:var(--curve);
+padding:calc(var(--gap)*2.5);margin-bottom:calc(var(--gap)*2);
+box-shadow:0 1px 4px rgba(0,0,0,0.08)
+}
+.progress-tracker{
+margin-bottom:calc(var(--gap)*2);background:var(--pearl-50);
+border-radius:var(--curve);padding:calc(var(--gap)*2);
+border:2px solid var(--ink-300)
+}
+.progress-header{
+font-size:16px;font-weight:600;margin-bottom:calc(var(--gap)*2);
+color:var(--ink-900);text-align:center
+}
+.progress-steps{display:flex;flex-direction:column;gap:var(--gap)}
+.progress-step{
+display:flex;align-items:center;gap:calc(var(--gap)*1.5);
+padding:calc(var(--gap)*1.5);background:var(--pearl-100);
+border-radius:calc(var(--curve)*0.6);transition:all 0.3s
+}
+.progress-step.in_progress{background:#fff3cd;border-left:4px solid var(--fire-500)}
+.progress-step.completed{background:#d1e7dd;border-left:4px solid var(--grass-600)}
+.progress-step.failed{background:#f8d7da;border-left:4px solid var(--fire-600)}
+.step-icon{font-size:20px;min-width:24px;text-align:center}
+.step-label{flex:1;font-weight:550;font-size:15px}
+.step-status{font-size:13px;color:var(--ink-500)}
+.progress-details{
+margin-top:calc(var(--gap)*2);padding:calc(var(--gap)*1.5);
+background:var(--pearl-100);border-radius:calc(var(--curve)*0.6);
+font-size:13px;line-height:1.4
+}
+.notice-bar{
+padding:calc(var(--gap)*1.75) calc(var(--gap)*2);border-radius:calc(var(--curve)*0.7);
+margin-bottom:calc(var(--gap)*2);font-size:14px;line-height:1.4
+}
+.notice-good{background:#d1e7dd;color:#0f5132;border-left:4px solid var(--grass-600)}
+button{
+padding:12px 24px;background:var(--sky-500);color:white;border:none;
+border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;
+margin-right:10px;margin-bottom:10px
+}
+button:hover{background:var(--sky-600)}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>GitUtil Progress Tracker Demo</h1>
+
+<div class="demo-section">
+<h2>Step-by-Step Rollback Progress</h2>
+<p style="margin-bottom:15px; color: var(--ink-500)">
+This demonstrates the new step tracking UI that shows real-time progress during rollback operations.
+</p>
+
+<div class="card">
+<div class="progress-tracker">
+<div class="progress-header">Rollback Progress</div>
+<div class="progress-steps">
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Validate</div>
+<div class="step-status">Completed</div>
+</div>
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Backup</div>
+<div class="step-status">Completed</div>
+</div>
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Reset</div>
+<div class="step-status">Completed</div>
+</div>
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Push</div>
+<div class="step-status">Completed</div>
+</div>
+</div>
+<div class="progress-details">
+<div style="margin-bottom:4px">✓ Commit verified: 93e0b9c7</div>
+<div style="margin-bottom:4px">✓ Creating backup branch: backup/before-rollback-20260208_200858</div>
+<div style="margin-bottom:4px">✓ Backup branch created successfully</div>
+<div style="margin-bottom:4px">✓ Reverting branch to commit: 93e0b9c7</div>
+<div style="margin-bottom:4px">✓ Reset successful</div>
+<div style="margin-bottom:4px">ℹ No remote configured - push skipped</div>
+</div>
+</div>
+<div class="notice-bar notice-good">
+✓ Successfully rolled back to 93e0b9c7
+</div>
+</div>
+</div>
+
+<div class="demo-section">
+<h2>In Progress State</h2>
+<p style="margin-bottom:15px; color: var(--ink-500)">
+Shows the UI while a rollback is in progress (Reset step active).
+</p>
+
+<div class="card">
+<div class="progress-tracker">
+<div class="progress-header">Rollback Progress</div>
+<div class="progress-steps">
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Validate</div>
+<div class="step-status">Completed</div>
+</div>
+<div class="progress-step completed">
+<div class="step-icon">✓</div>
+<div class="step-label">Backup</div>
+<div class="step-status">Completed</div>
+</div>
+<div class="progress-step in_progress">
+<div class="step-icon">⏳</div>
+<div class="step-label">Reset</div>
+<div class="step-status">In Progress</div>
+</div>
+<div class="progress-step">
+<div class="step-icon">⏳</div>
+<div class="step-label">Push</div>
+<div class="step-status">Pending</div>
+</div>
+</div>
+<div class="progress-details">
+<div style="margin-bottom:4px">✓ Commit verified: 93e0b9c7</div>
+<div style="margin-bottom:4px">✓ Backup branch created successfully</div>
+<div style="margin-bottom:4px">⏳ Reverting branch to commit: 93e0b9c7...</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="demo-section">
+<h2>Key Features Implemented</h2>
+<div class="card">
+<ul style="list-style-position: inside; color: var(--ink-700)">
+<li style="margin-bottom:8px"><strong>Real-time Step Tracking:</strong> Shows progress through 4 steps (Validate, Backup, Reset, Push)</li>
+<li style="margin-bottom:8px"><strong>Visual Status Indicators:</strong> Colors and icons show step status (pending, in progress, completed, failed)</li>
+<li style="margin-bottom:8px"><strong>Detailed Progress Messages:</strong> Shows specific actions being performed</li>
+<li style="margin-bottom:8px"><strong>Transactional Rollback:</strong> On any failure, automatically reverts to backup</li>
+<li style="margin-bottom:8px"><strong>Smart Remote Detection:</strong> Skips push step if no remote configured</li>
+</ul>
+</div>
+</div>
+
+<div class="demo-section">
+<h2>How It Works</h2>
+<div class="card">
+<p style="margin-bottom:12px"><strong>Step Output Format:</strong></p>
+<pre style="background: var(--pearl-100); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px">
+STEP_STATUS:validate:in_progress
+STEP_STATUS:validate:completed
+STEP_STATUS:backup:in_progress
+STEP_DETAIL:Creating backup branch: backup/before-rollback-20260208
+STEP_DETAIL:Backup branch created successfully
+STEP_STATUS:backup:completed
+STEP_STATUS:reset:in_progress
+STEP_DETAIL:Reverting branch to commit: 93e0b9c7
+STEP_STATUS:reset:completed
+STEP_STATUS:push:in_progress
+STEP_DETAIL:No remote configured - push skipped
+STEP_STATUS:push:completed
+SUCCESS: Branch reverted to 93e0b9c7
+</pre>
+<p style="margin-top:12px; color: var(--ink-500); font-size: 14px">
+The UI parses these structured messages and updates the progress display in real-time.
+</p>
+</div>
+</div>
+
+</div>
+</body>
+</html>

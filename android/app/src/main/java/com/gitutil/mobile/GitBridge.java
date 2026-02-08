@@ -166,7 +166,7 @@ public class GitBridge {
                     return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nCommit not found: " + commitHash);
                 }
                 Log.i(TAG, "✓ Commit " + commitHash + " verified");
-                stepOutput.append("STEP_DETAIL:Commit verified: ").append(commitHash, 0, Math.min(8, commitHash.length())).append("\n");
+                stepOutput.append("STEP_DETAIL:Commit verified: ").append(commitHash, 0, Math.min(commitHash.length(), 8)).append("\n");
                 stepOutput.append("STEP_STATUS:validate:completed\n");
                 
                 // Step 2: Create backup branch
@@ -207,7 +207,7 @@ public class GitBridge {
                 // Step 3: Reset to target commit
                 stepOutput.append("STEP_STATUS:reset:in_progress\n");
                 Log.i(TAG, "Executing hard reset to: " + commitHash);
-                stepOutput.append("STEP_DETAIL:Reverting branch to commit: ").append(commitHash, 0, Math.min(8, commitHash.length())).append("\n");
+                stepOutput.append("STEP_DETAIL:Reverting branch to commit: ").append(commitHash, 0, Math.min(commitHash.length(), 8)).append("\n");
                 
                 try {
                     git.reset()
