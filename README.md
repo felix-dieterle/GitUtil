@@ -43,6 +43,8 @@ This project uses a lightweight shell-based architecture:
   - `validate_repo.sh` - Validates git repositories
   - `fetch_commits.sh` - Extracts commit history
   - `revert_branch.sh` - Reverts branch to specific commit
+  - `prepare_repo.sh` - Prepares repository (clones if URL)
+  - `cleanup_repo.sh` - Deletes repository from workspace
 - `tests/` - Comprehensive test suite for all scripts
 - `docs/` - Architecture and integration documentation
 
@@ -167,7 +169,8 @@ The interactive UI provides:
    - Repositories are automatically cloned to `~/.gitutil/repos/` if they don't exist locally
 2. **View commit history** - See all commits with hash, author, timestamp, and message
 3. **Revert branch to commit** - Safely reset your branch to any previous commit with automatic backup
-4. **Exit** - Close the application
+4. **Cleanup repository** - Delete local repository clones from the workspace
+5. **Exit** - Close the application
 
 #### Automatic Backup Branches
 
@@ -251,6 +254,9 @@ You can also call the scripts directly:
 
 # Revert to a specific commit
 ./scripts/revert_branch.sh /path/to/repo <commit-hash>
+
+# Cleanup a repository (delete from disk)
+./scripts/cleanup_repo.sh /path/to/repo
 ```
 
 ## Testing

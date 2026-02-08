@@ -210,6 +210,38 @@ revert_to_commit() {
     fi
 }
 
+# Cleanup repository
+cleanup_repository() {
+    local repo_path="$1"
+    
+    print_warning "This will permanently delete the repository from disk."
+    print_warning "All local changes and commits will be lost."
+    echo -e "\n${BOLD}Repository to delete:${NC}"
+    echo -e "  ${RED}$repo_path${NC}"
+    echo ""
+    echo -n "Are you sure you want to delete this repository? (yes/no): "
+    read -r confirmation
+    
+    if [ "$confirmation" != "yes" ]; then
+        print_info "Cleanup cancelled."
+        return 1
+    fi
+    
+    print_info "Deleting repository..."
+    
+    local result
+    result=$("$SCRIPTS_PATH/cleanup_repo.sh" "$repo_path" 2>&1)
+    
+    if [ $? -eq 0 ]; then
+        print_success "Repository successfully deleted: $repo_path"
+        return 0
+    else
+        print_error "Failed to delete repository"
+        echo "$result"
+        return 1
+    fi
+}
+
 # Main menu
 show_menu() {
     local repo_path="$1"
@@ -225,9 +257,10 @@ show_menu() {
         echo -e "  ${CYAN}1)${NC} Select repository"
         echo -e "  ${CYAN}2)${NC} View commit history"
         echo -e "  ${CYAN}3)${NC} Revert branch to commit"
-        echo -e "  ${CYAN}4)${NC} Exit"
+        echo -e "  ${CYAN}4)${NC} Cleanup repository"
+        echo -e "  ${CYAN}5)${NC} Exit"
         echo ""
-        echo -n "Choose an option [1-4]: "
+        echo -n "Choose an option [1-5]: "
         read -r choice
         
         case $choice in
@@ -325,13 +358,35 @@ show_menu() {
                 read -r
                 ;;
             4)
+                if [ -z "$repo_path" ]; then
+                    echo ""
+                    print_error "No repository selected. Please select a repository first."
+                    echo ""
+                    echo "Press Enter to continue..."
+                    read -r
+                    continue
+                fi
+                
+                echo ""
+                cleanup_repository "$repo_path"
+                
+                # If cleanup was successful, unset repo_path
+                if [ $? -eq 0 ]; then
+                    repo_path=""
+                fi
+                
+                echo ""
+                echo "Press Enter to continue..."
+                read -r
+                ;;
+            5)
                 echo ""
                 print_info "Thank you for using GitUtil!"
                 exit 0
                 ;;
             *)
                 echo ""
-                print_error "Invalid option. Please choose 1-4."
+                print_error "Invalid option. Please choose 1-5."
                 echo ""
                 echo "Press Enter to continue..."
                 read -r
@@ -346,7 +401,8 @@ main() {
     if [ ! -f "$SCRIPTS_PATH/validate_repo.sh" ] || \
        [ ! -f "$SCRIPTS_PATH/fetch_commits.sh" ] || \
        [ ! -f "$SCRIPTS_PATH/revert_branch.sh" ] || \
-       [ ! -f "$SCRIPTS_PATH/prepare_repo.sh" ]; then
+       [ ! -f "$SCRIPTS_PATH/prepare_repo.sh" ] || \
+       [ ! -f "$SCRIPTS_PATH/cleanup_repo.sh" ]; then
         echo "Error: Required scripts not found in $SCRIPTS_PATH"
         exit 1
     fi
