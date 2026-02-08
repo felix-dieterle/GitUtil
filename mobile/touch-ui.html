@@ -104,6 +104,34 @@ padding:0;margin-top:calc(var(--gap)*1.5);cursor:pointer;font-size:14px;font-fam
 .log-error{color:#d62828}
 .log-warn{color:#f77f00}
 .log-info{color:#2e8bc0}
+.progress-tracker{
+margin-bottom:calc(var(--gap)*2);background:var(--pearl-50);
+border-radius:var(--curve);padding:calc(var(--gap)*2);
+border:2px solid var(--ink-300)
+}
+.progress-header{
+font-size:16px;font-weight:600;margin-bottom:calc(var(--gap)*2);
+color:var(--ink-900);text-align:center
+}
+.progress-steps{display:flex;flex-direction:column;gap:var(--gap)}
+.progress-step{
+display:flex;align-items:center;gap:calc(var(--gap)*1.5);
+padding:calc(var(--gap)*1.5);background:var(--pearl-100);
+border-radius:calc(var(--curve)*0.6);transition:all 0.3s
+}
+.progress-step.in_progress{background:#fff3cd;border-left:4px solid var(--fire-500)}
+.progress-step.completed{background:#d1e7dd;border-left:4px solid var(--grass-600)}
+.progress-step.failed{background:#f8d7da;border-left:4px solid var(--fire-600)}
+.step-icon{font-size:20px;min-width:24px;text-align:center}
+.step-label{flex:1;font-weight:550;font-size:15px}
+.step-status{font-size:13px;color:var(--ink-500)}
+.progress-details{
+margin-top:calc(var(--gap)*2);padding:calc(var(--gap)*1.5);
+background:var(--pearl-100);border-radius:calc(var(--curve)*0.6);
+font-size:13px;line-height:1.4;max-height:120px;
+overflow-y:auto;display:none
+}
+.progress-details.visible{display:block}
 </style>
 </head>
 <body>
@@ -209,6 +237,33 @@ Enter your GitHub Personal Access Token to browse and clone your repositories.
 <h2 class="card__header">Timeline Browser</h2>
 <div id="pathDisplay" class="notice-bar notice-info"></div>
 <div id="snapshotList" class="timeline-zone"></div>
+<!-- Progress Tracker -->
+<div id="progressTracker" class="progress-tracker screen-off">
+<div class="progress-header">Rollback Progress</div>
+<div class="progress-steps">
+<div class="progress-step" data-step="validate">
+<div class="step-icon">⏳</div>
+<div class="step-label">Validate</div>
+<div class="step-status">Pending</div>
+</div>
+<div class="progress-step" data-step="backup">
+<div class="step-icon">⏳</div>
+<div class="step-label">Backup</div>
+<div class="step-status">Pending</div>
+</div>
+<div class="progress-step" data-step="reset">
+<div class="step-icon">⏳</div>
+<div class="step-label">Reset</div>
+<div class="step-status">Pending</div>
+</div>
+<div class="progress-step" data-step="push">
+<div class="step-icon">⏳</div>
+<div class="step-label">Push</div>
+<div class="step-status">Pending</div>
+</div>
+</div>
+<div id="progressDetails" class="progress-details"></div>
+</div>
 <div class="btn-row">
 <button id="rollbackBtn" class="action-btn btn-danger btn-locked">Apply Rollback</button>
 <button id="switchBtn" class="action-btn btn-neutral">Change Repo</button>
@@ -314,6 +369,9 @@ rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg'),
 viewLogsBtn:document.getElementById('viewLogsBtn'),
+// Progress tracker
+progressTracker:document.getElementById('progressTracker'),
+progressDetails:document.getElementById('progressDetails'),
 // Log viewer
 logViewer:document.getElementById('logViewer'),
 logContent:document.getElementById('logContent'),
@@ -714,6 +772,75 @@ Nodes.customCancelBtn.onclick=()=>{
 switchView(Nodes.repoSelector);
 };
 
+// Progress tracker functions
+const resetProgressTracker=()=>{
+const steps=['validate','backup','reset','push'];
+steps.forEach(step=>{
+const stepEl=Nodes.progressTracker.querySelector(`[data-step="${step}"]`);
+if(stepEl){
+stepEl.classList.remove('in_progress','completed','failed');
+stepEl.querySelector('.step-icon').textContent='⏳';
+stepEl.querySelector('.step-status').textContent='Pending';
+}
+});
+Nodes.progressDetails.innerHTML='';
+Nodes.progressDetails.classList.remove('visible');
+};
+
+const updateStepStatus=(stepName,status)=>{
+const stepEl=Nodes.progressTracker.querySelector(`[data-step="${stepName}"]`);
+if(!stepEl)return;
+
+stepEl.classList.remove('in_progress','completed','failed');
+const icon=stepEl.querySelector('.step-icon');
+const statusText=stepEl.querySelector('.step-status');
+
+if(status==='in_progress'){
+stepEl.classList.add('in_progress');
+icon.textContent='⏳';
+statusText.textContent='In Progress';
+}else if(status==='completed'){
+stepEl.classList.add('completed');
+icon.textContent='✓';
+statusText.textContent='Completed';
+}else if(status==='failed'){
+stepEl.classList.add('failed');
+icon.textContent='❌';
+statusText.textContent='Failed';
+}
+};
+
+const addProgressDetail=(message)=>{
+const detail=document.createElement('div');
+detail.textContent=message;
+detail.style.marginBottom='4px';
+Nodes.progressDetails.appendChild(detail);
+Nodes.progressDetails.classList.add('visible');
+// Auto-scroll to bottom
+Nodes.progressDetails.scrollTop=Nodes.progressDetails.scrollHeight;
+};
+
+const parseStepOutput=(output)=>{
+const lines=output.split('\n');
+lines.forEach(line=>{
+// Parse STEP_STATUS:step_name:status
+if(line.startsWith('STEP_STATUS:')){
+const parts=line.substring(12).split(':');
+if(parts.length===2){
+const[stepName,status]=parts;
+console.log(`[PROGRESS] Step: ${stepName}, Status: ${status}`);
+updateStepStatus(stepName,status);
+}
+}
+// Parse STEP_DETAIL:message
+if(line.startsWith('STEP_DETAIL:')){
+const message=line.substring(12);
+console.log(`[PROGRESS] Detail: ${message}`);
+addProgressDetail(message);
+}
+});
+};
+
 // Rollback button
 Nodes.rollbackBtn.onclick=async()=>{
 console.log('[ROLLBACK] Apply Rollback button clicked');
@@ -733,6 +860,11 @@ console.log('[ROLLBACK] User confirmed rollback operation');
 console.log('[ROLLBACK] Target commit:', WidgetState.picked);
 console.log('[ROLLBACK] Repository:', WidgetState.loc);
 console.log('[ROLLBACK] ========================================');
+
+// Show and reset progress tracker
+Nodes.progressTracker.classList.remove('screen-off');
+resetProgressTracker();
+
 showMsg(Nodes.rollbackMsg,'⏳ Initiating rollback operation...','info');
 setBusy(Nodes.rollbackBtn,true);
 try{
@@ -745,11 +877,16 @@ console.log('[ROLLBACK] Response success flag:', res.success);
 console.log('[ROLLBACK] Response exit code:', res.exit_code);
 console.log('[ROLLBACK] Response output:', res.output);
 console.log('[ROLLBACK] Response errors:', res.errors);
-if(res.success&&res.output.startsWith('ROLLBACK_SUCCESS:')){
+
+// Parse step output from both stdout and stderr
+if(res.output)parseStepOutput(res.output);
+if(res.errors)parseStepOutput(res.errors);
+
+if(res.success&&res.output.includes('ROLLBACK_SUCCESS:')){
 console.log('[ROLLBACK] ✓ Rollback completed successfully');
 console.log('[ROLLBACK] New HEAD is now at:', WidgetState.picked.substring(0,8));
 showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
-console.log('[ROLLBACK] Refreshing timeline in 1.5 seconds...');
+console.log('[ROLLBACK] Refreshing timeline in 2 seconds...');
 setTimeout(async()=>{
 console.log('[ROLLBACK] Fetching updated timeline...');
 const refresh=await callWrapper('pull-timeline',[WidgetState.loc]);
@@ -757,10 +894,14 @@ if(refresh.success){
 console.log('[ROLLBACK] Timeline refreshed successfully');
 WidgetState.snapshots=parseSnapshots(refresh.output);
 renderSnapshots(WidgetState.snapshots);
+// Hide progress tracker after successful refresh
+setTimeout(()=>{
+Nodes.progressTracker.classList.add('screen-off');
+},2000);
 }else{
 console.warn('[ROLLBACK] Timeline refresh failed:', refresh);
 }
-},1500);
+},2000);
 }else{
 console.error('[ROLLBACK] ❌ Rollback operation failed');
 // Build detailed error message
@@ -769,7 +910,7 @@ if(res.errors){
 errorDetails+=res.errors;
 console.error('[ROLLBACK] Error details from stderr:', res.errors);
 }
-if(res.output&&!res.output.startsWith('ROLLBACK_SUCCESS:')){
+if(res.output&&!res.output.includes('ROLLBACK_SUCCESS:')){
 if(errorDetails)errorDetails+='\n';
 errorDetails+=res.output;
 console.error('[ROLLBACK] Output from stdout:', res.output);
