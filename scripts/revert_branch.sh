@@ -35,10 +35,21 @@ fi
 echo "Reverting branch to commit: $COMMIT_HASH"
 git reset --hard "$COMMIT_HASH"
 
-if [ $? -eq 0 ]; then
-    echo "SUCCESS: Branch reverted to $COMMIT_HASH"
-    exit 0
-else
+if [ $? -ne 0 ]; then
     echo "ERROR: Failed to revert branch"
     exit 1
+fi
+
+# Push the changes to remote
+echo "Pushing changes to remote..."
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git push --force-with-lease origin "$CURRENT_BRANCH"
+
+if [ $? -eq 0 ]; then
+    echo "SUCCESS: Branch reverted to $COMMIT_HASH and pushed to remote"
+    exit 0
+else
+    echo "WARNING: Branch reverted locally to $COMMIT_HASH, but push to remote failed"
+    echo "You may need to push manually with: git push --force-with-lease"
+    exit 0
 fi
