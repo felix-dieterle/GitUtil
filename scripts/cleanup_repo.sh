@@ -31,9 +31,7 @@ if [ ! -d "$REPO_PATH/.git" ]; then
 fi
 
 # Delete the repository
-rm -rf "$REPO_PATH"
-
-if [ $? -eq 0 ]; then
+if rm -rf "$REPO_PATH"; then
     echo "SUCCESS: Repository deleted: $REPO_PATH"
     exit 0
 else

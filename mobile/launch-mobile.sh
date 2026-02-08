@@ -307,13 +307,11 @@ if [[ ! -d "${REPO_PATH}/.git" ]]; then
 fi
 
 # Delete the repository
-rm -rf "${REPO_PATH}"
-if [[ $? -eq 0 ]]; then
+if rm -rf "${REPO_PATH}"; then
     echo "CLEANUP_SUCCESS"
     exit 0
 else
     echo "CLEANUP_FAILED"
-    echo "ERROR: Failed to delete repository"
     exit 1
 fi
 WRAPPER_END
