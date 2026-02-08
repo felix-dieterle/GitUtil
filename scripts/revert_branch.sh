@@ -55,7 +55,7 @@ report_step "validate" "completed"
 
 # Step 2: Create backup branch
 report_step "backup" "in_progress"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S_%N | cut -c1-21)  # Include nanoseconds for uniqueness
 CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null)
 BACKUP_BRANCH=""
 
@@ -98,23 +98,32 @@ report_step "push" "in_progress"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 report_step_detail "Pushing changes to remote branch: $CURRENT_BRANCH"
 
-# Note: --force-with-lease provides safety by checking that the remote branch
-# matches the state of the local tracking branch
-git push --force-with-lease origin "$CURRENT_BRANCH" 2>/dev/null
+# Check if remote exists
+if git remote | grep -q "^origin$"; then
+    # Note: --force-with-lease provides safety by checking that the remote branch
+    # matches the state of the local tracking branch
+    git push --force-with-lease origin "$CURRENT_BRANCH" 2>/dev/null
 
-if [ $? -eq 0 ]; then
-    report_step "push" "completed"
-    report_step_detail "Successfully pushed to remote"
-    echo "SUCCESS: Branch reverted to $COMMIT_HASH and pushed to remote"
-    # Clean up backup branch on complete success
-    git branch -D "$BACKUP_BRANCH" 2>/dev/null
-    exit 0
+    if [ $? -eq 0 ]; then
+        report_step "push" "completed"
+        report_step_detail "Successfully pushed to remote"
+        echo "SUCCESS: Branch reverted to $COMMIT_HASH and pushed to remote"
+        # Keep backup branch for user reference (not deleted on success)
+        exit 0
+    else
+        report_step "push" "failed"
+        report_step_detail "Push to remote failed"
+        # Rollback the transaction
+        rollback_changes "$BACKUP_BRANCH" "$CURRENT_HEAD"
+        echo "ERROR: Push to remote failed - changes rolled back"
+        echo "The rollback was aborted to maintain consistency with remote"
+        exit 1
+    fi
 else
-    report_step "push" "failed"
-    report_step_detail "Push to remote failed"
-    # Rollback the transaction
-    rollback_changes "$BACKUP_BRANCH" "$CURRENT_HEAD"
-    echo "ERROR: Push to remote failed - changes rolled back"
-    echo "The rollback was aborted to maintain consistency with remote"
-    exit 1
+    # No remote configured - skip push and succeed
+    report_step "push" "completed"
+    report_step_detail "No remote configured - push skipped"
+    echo "SUCCESS: Branch reverted to $COMMIT_HASH (local only, no remote configured)"
+    # Keep backup branch for user reference (not deleted on success)
+    exit 0
 fi

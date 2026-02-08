@@ -120,7 +120,7 @@ current_head=$(git rev-parse HEAD 2>&1)
 echo "[WRAPPER] Current HEAD: ${current_head}"
 
 echo "[WRAPPER] Creating backup branch before rollback..."
-timestamp=$(date +%Y%m%d_%H%M%S)
+timestamp=$(date +%Y%m%d_%H%M%S_%N | cut -c1-21)  # Include nanoseconds for uniqueness
 backup_branch="backup/before-rollback-${timestamp}"
 echo "[WRAPPER] Backup branch name: ${backup_branch}"
 git branch "${backup_branch}" "${current_head}" 2>/dev/null
@@ -166,26 +166,37 @@ report_step "push" "in_progress"
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 echo "[WRAPPER] Pushing to remote branch: ${current_branch}"
 
-git push --force-with-lease origin "${current_branch}" 2>/dev/null
-push_exit=$?
+# Check if remote exists
+if git remote | grep -q "^origin$"; then
+    git push --force-with-lease origin "${current_branch}" 2>/dev/null
+    push_exit=$?
 
-if [[ ${push_exit} -eq 0 ]]; then
+    if [[ ${push_exit} -eq 0 ]]; then
+        report_step "push" "completed"
+        echo "[WRAPPER] ✓ Successfully pushed to remote"
+        # Keep backup branch for user reference (not deleted on success)
+        echo "[WRAPPER] ========================================"
+        echo "ROLLBACK_SUCCESS: ${TARGET_HASH}"
+        exit 0
+    else
+        report_step "push" "failed"
+        echo "[WRAPPER] ❌ Push to remote failed"
+        # Rollback the transaction
+        rollback_changes "${backup_branch}" "${current_head}"
+        echo "[WRAPPER] ========================================"
+        echo "ROLLBACK_FAILED"
+        echo "ERROR: Push to remote failed - changes rolled back to maintain consistency"
+        exit 1
+    fi
+else
+    # No remote configured - skip push and succeed
     report_step "push" "completed"
-    echo "[WRAPPER] ✓ Successfully pushed to remote"
-    # Clean up backup branch on complete success
-    git branch -D "${backup_branch}" 2>/dev/null
+    report_step_detail "No remote configured - push skipped"
+    echo "[WRAPPER] ℹ No remote configured - push skipped"
+    # Keep backup branch for user reference (not deleted on success)
     echo "[WRAPPER] ========================================"
     echo "ROLLBACK_SUCCESS: ${TARGET_HASH}"
     exit 0
-else
-    report_step "push" "failed"
-    echo "[WRAPPER] ❌ Push to remote failed"
-    # Rollback the transaction
-    rollback_changes "${backup_branch}" "${current_head}"
-    echo "[WRAPPER] ========================================"
-    echo "ROLLBACK_FAILED"
-    echo "ERROR: Push to remote failed - changes rolled back to maintain consistency"
-    exit 1
 fi
 WRAPPER_END
 

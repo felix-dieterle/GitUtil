@@ -240,16 +240,8 @@ public class GitBridge {
                 stepOutput.append("STEP_DETAIL:Push skipped (Android local-only mode)\n");
                 stepOutput.append("STEP_STATUS:push:completed\n");
                 
-                // Success - clean up backup branch
-                try {
-                    git.branchDelete()
-                        .setBranchNames(backupBranchName)
-                        .setForce(true)
-                        .call();
-                    Log.i(TAG, "Backup branch cleaned up: " + backupBranchName);
-                } catch (Exception deleteEx) {
-                    Log.w(TAG, "Warning: Could not delete backup branch: " + backupBranchName);
-                }
+                // Success - keep backup branch for user reference (not deleted on success)
+                Log.i(TAG, "Backup branch retained: " + backupBranchName);
                 
                 Log.i(TAG, "========================================");
                 return createSuccessResponse(stepOutput.toString() + "ROLLBACK_SUCCESS: " + commitHash);
