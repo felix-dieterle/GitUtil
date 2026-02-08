@@ -166,9 +166,10 @@ fi
 
 # Verify backup branch points to the correct commit (the third commit, before rollback)
 cd "$TEST_DIR/test_backup_repo"
-BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | head -1 | tr -d ' ')
+# Get the most recently created backup branch (sorted by name which includes timestamp)
+BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | sort | tail -1 | tr -d ' ')
 if [ -n "$BACKUP_BRANCH_NAME" ]; then
-    BACKUP_BRANCH_COMMIT=$(git rev-parse "$BACKUP_BRANCH_NAME")
+    BACKUP_BRANCH_COMMIT=$(git rev-parse "$BACKUP_BRANCH_NAME" 2>/dev/null)
     cd - > /dev/null
     
     TESTS_RUN=$((TESTS_RUN + 1))

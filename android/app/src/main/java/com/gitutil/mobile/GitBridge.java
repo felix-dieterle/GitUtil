@@ -146,6 +146,7 @@ public class GitBridge {
                 
                 // Create backup branch before rollback
                 if (currentHead != null) {
+                    // SimpleDateFormat created locally for immediate use - thread-safe in this context
                     SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
                     String timestamp = timestampFormat.format(new Date());
                     String backupBranchName = "backup/before-rollback-" + timestamp;
