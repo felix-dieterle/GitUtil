@@ -117,7 +117,7 @@ public class GitBridge {
     }
 
     /**
-     * Apply rollback to a specific commit
+     * Apply rollback to a specific commit with step tracking and transactional behavior
      * 
      * NOTE: This Android/JGit implementation performs local rollback only.
      * The shell script version (revert_branch.sh) also pushes changes to remote.
@@ -125,11 +125,12 @@ public class GitBridge {
      * 
      * @param path Repository path
      * @param commitHash Target commit hash
-     * @return JSON response with success or error
+     * @return JSON response with success or error and step tracking information
      */
     private String applyRollback(String path, String commitHash) {
         // Create SimpleDateFormat locally to ensure thread safety
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        StringBuilder stepOutput = new StringBuilder();
         
         Log.i(TAG, "========================================");
         Log.i(TAG, "Apply Rollback Operation Started");
@@ -138,57 +139,120 @@ public class GitBridge {
         Log.i(TAG, "Repository Path: " + path);
         Log.i(TAG, "Target Commit: " + commitHash);
         
+        String backupBranchName = null;
+        ObjectId currentHead = null;
+        
         try (Repository repository = openRepository(path)) {
-            Log.i(TAG, "Repository opened successfully");
+            // Step 1: Validate repository
+            stepOutput.append("STEP_STATUS:validate:in_progress\n");
+            Log.i(TAG, "Validating repository...");
+            
+            if (!repository.getObjectDatabase().exists()) {
+                stepOutput.append("STEP_STATUS:validate:failed\n");
+                Log.e(TAG, "ERROR: Repository validation failed");
+                return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nInvalid repository");
+            }
+            
+            Log.i(TAG, "Repository validated successfully");
             
             try (Git git = new Git(repository)) {
                 Log.i(TAG, "Verifying commit exists in repository...");
                 ObjectId commitId = repository.resolve(commitHash);
                 if (commitId == null) {
+                    stepOutput.append("STEP_STATUS:validate:failed\n");
+                    stepOutput.append("STEP_DETAIL:Commit ").append(commitHash).append(" not found\n");
                     Log.e(TAG, "ERROR: Commit verification failed");
                     Log.e(TAG, "Commit " + commitHash + " not found in this repository");
-                    return createErrorResponse("ROLLBACK_FAILED\nCommit not found: " + commitHash);
+                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nCommit not found: " + commitHash);
                 }
                 Log.i(TAG, "✓ Commit " + commitHash + " verified");
+                stepOutput.append("STEP_DETAIL:Commit verified: ").append(commitHash, 0, Math.min(8, commitHash.length())).append("\n");
+                stepOutput.append("STEP_STATUS:validate:completed\n");
                 
-                // Get current HEAD for reference
-                ObjectId currentHead = repository.resolve("HEAD");
+                // Step 2: Create backup branch
+                stepOutput.append("STEP_STATUS:backup:in_progress\n");
+                currentHead = repository.resolve("HEAD");
                 Log.i(TAG, "Current HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
                 
-                // Create backup branch before rollback
-                if (currentHead != null) {
-                    // SimpleDateFormat created locally for immediate use - thread-safe in this context
-                    SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
-                    String timestamp = timestampFormat.format(new Date());
-                    String backupBranchName = "backup/before-rollback-" + timestamp;
-                    Log.i(TAG, "Creating backup branch: " + backupBranchName);
-                    
-                    try {
-                        git.branchCreate()
-                            .setName(backupBranchName)
-                            .setStartPoint(currentHead.getName())
-                            .call();
-                        Log.i(TAG, "✓ Backup branch created successfully: " + backupBranchName);
-                    } catch (Exception branchEx) {
-                        Log.w(TAG, "⚠ WARNING: Failed to create backup branch, proceeding with rollback");
-                        Log.w(TAG, "Backup branch error: " + (branchEx.getMessage() != null ? branchEx.getMessage() : "unknown"));
-                    }
+                if (currentHead == null) {
+                    stepOutput.append("STEP_STATUS:backup:failed\n");
+                    stepOutput.append("STEP_DETAIL:Could not determine current HEAD\n");
+                    Log.e(TAG, "ERROR: Could not determine current HEAD");
+                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nCould not determine current HEAD");
                 }
                 
+                // SimpleDateFormat created locally for immediate use - thread-safe in this context
+                SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+                String timestamp = timestampFormat.format(new Date());
+                backupBranchName = "backup/before-rollback-" + timestamp;
+                Log.i(TAG, "Creating backup branch: " + backupBranchName);
+                stepOutput.append("STEP_DETAIL:Creating backup branch: ").append(backupBranchName).append("\n");
+                
+                try {
+                    git.branchCreate()
+                        .setName(backupBranchName)
+                        .setStartPoint(currentHead.getName())
+                        .call();
+                    Log.i(TAG, "✓ Backup branch created successfully: " + backupBranchName);
+                    stepOutput.append("STEP_DETAIL:Backup branch created successfully\n");
+                    stepOutput.append("STEP_STATUS:backup:completed\n");
+                } catch (Exception branchEx) {
+                    stepOutput.append("STEP_STATUS:backup:failed\n");
+                    stepOutput.append("STEP_DETAIL:Failed to create backup branch\n");
+                    Log.e(TAG, "ERROR: Failed to create backup branch");
+                    Log.e(TAG, "Backup branch error: " + (branchEx.getMessage() != null ? branchEx.getMessage() : "unknown"));
+                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nFailed to create backup branch");
+                }
+                
+                // Step 3: Reset to target commit
+                stepOutput.append("STEP_STATUS:reset:in_progress\n");
                 Log.i(TAG, "Executing hard reset to: " + commitHash);
-                git.reset()
-                    .setMode(ResetCommand.ResetType.HARD)
-                    .setRef(commitHash)
-                    .call();
+                stepOutput.append("STEP_DETAIL:Reverting branch to commit: ").append(commitHash, 0, Math.min(8, commitHash.length())).append("\n");
                 
-                // Get new HEAD
-                ObjectId newHead = repository.resolve("HEAD");
-                Log.i(TAG, "✓ Rollback successful");
-                Log.i(TAG, "Previous HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
-                Log.i(TAG, "New HEAD: " + (newHead != null ? newHead.getName() : "unknown"));
+                try {
+                    git.reset()
+                        .setMode(ResetCommand.ResetType.HARD)
+                        .setRef(commitHash)
+                        .call();
+                    
+                    // Get new HEAD
+                    ObjectId newHead = repository.resolve("HEAD");
+                    Log.i(TAG, "✓ Reset successful");
+                    Log.i(TAG, "Previous HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
+                    Log.i(TAG, "New HEAD: " + (newHead != null ? newHead.getName() : "unknown"));
+                    stepOutput.append("STEP_DETAIL:Reset successful\n");
+                    stepOutput.append("STEP_STATUS:reset:completed\n");
+                } catch (Exception resetEx) {
+                    stepOutput.append("STEP_STATUS:reset:failed\n");
+                    stepOutput.append("STEP_DETAIL:Git reset failed\n");
+                    Log.e(TAG, "ERROR: Git reset failed");
+                    
+                    // Rollback: Restore from backup branch
+                    rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
+                    
+                    String errorMsg = resetEx.getMessage() != null ? resetEx.getMessage() : resetEx.getClass().getSimpleName();
+                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\n" + errorMsg);
+                }
+                
+                // Step 4: Push (Not implemented in Android version - local only)
+                // This is documented as a known limitation
+                stepOutput.append("STEP_STATUS:push:in_progress\n");
+                stepOutput.append("STEP_DETAIL:Push skipped (Android local-only mode)\n");
+                stepOutput.append("STEP_STATUS:push:completed\n");
+                
+                // Success - clean up backup branch
+                try {
+                    git.branchDelete()
+                        .setBranchNames(backupBranchName)
+                        .setForce(true)
+                        .call();
+                    Log.i(TAG, "Backup branch cleaned up: " + backupBranchName);
+                } catch (Exception deleteEx) {
+                    Log.w(TAG, "Warning: Could not delete backup branch: " + backupBranchName);
+                }
+                
                 Log.i(TAG, "========================================");
-                
-                return createSuccessResponse("ROLLBACK_SUCCESS: " + commitHash);
+                return createSuccessResponse(stepOutput.toString() + "ROLLBACK_SUCCESS: " + commitHash);
             }
         } catch (Exception e) {
             Log.e(TAG, "❌ Rollback failed");
@@ -197,7 +261,44 @@ public class GitBridge {
             Log.e(TAG, "========================================");
             
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            return createErrorResponse("ROLLBACK_FAILED\n" + errorMsg);
+            return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\n" + errorMsg);
+        }
+    }
+
+    /**
+     * Helper method to rollback changes by restoring from backup branch
+     * Called when a step in the transaction fails
+     */
+    private void rollbackToBackup(Git git, String backupBranchName, ObjectId originalHead, StringBuilder stepOutput) {
+        stepOutput.append("STEP_DETAIL:Transaction failed - initiating rollback\n");
+        Log.w(TAG, "Transaction failed - attempting to restore from backup");
+        
+        try {
+            if (backupBranchName != null && git.getRepository().resolve(backupBranchName) != null) {
+                stepOutput.append("STEP_DETAIL:Restoring from backup branch: ").append(backupBranchName).append("\n");
+                Log.i(TAG, "Restoring from backup branch: " + backupBranchName);
+                
+                git.reset()
+                    .setMode(ResetCommand.ResetType.HARD)
+                    .setRef(backupBranchName)
+                    .call();
+                
+                // Delete the backup branch after restoring
+                git.branchDelete()
+                    .setBranchNames(backupBranchName)
+                    .setForce(true)
+                    .call();
+                
+                String headStr = originalHead != null ? originalHead.getName().substring(0, 8) : "unknown";
+                stepOutput.append("STEP_DETAIL:State restored to original HEAD: ").append(headStr).append("\n");
+                Log.i(TAG, "State restored to original HEAD: " + headStr);
+            } else {
+                stepOutput.append("STEP_DETAIL:Backup branch not available for restoration\n");
+                Log.w(TAG, "Backup branch not available for restoration");
+            }
+        } catch (Exception rollbackEx) {
+            stepOutput.append("STEP_DETAIL:Warning: Rollback restoration failed\n");
+            Log.e(TAG, "Error during rollback restoration: " + rollbackEx.getMessage());
         }
     }
 

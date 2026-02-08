@@ -44,6 +44,30 @@ cat > "${WRAPPER_DIR}/apply-rollback.sh" << 'WRAPPER_END'
 LOCATION_PATH="$1"
 TARGET_HASH="$2"
 
+# Step tracking functions
+report_step() {
+    echo "STEP_STATUS:$1:$2"  # Format: STEP_STATUS:<step_name>:<status>
+}
+
+report_step_detail() {
+    echo "STEP_DETAIL:$1"  # Format: STEP_DETAIL:<message>
+}
+
+# Rollback function to restore state on failure
+rollback_changes() {
+    local backup_branch="$1"
+    local original_head="$2"
+    
+    report_step_detail "Transaction failed - initiating rollback"
+    
+    if [[ -n "$backup_branch" ]] && git rev-parse --verify "$backup_branch" >/dev/null 2>&1; then
+        report_step_detail "Restoring from backup branch: $backup_branch"
+        git reset --hard "$backup_branch" 2>/dev/null
+        git branch -D "$backup_branch" 2>/dev/null
+        report_step_detail "State restored to original HEAD: $original_head"
+    fi
+}
+
 echo "[WRAPPER] ========================================"
 echo "[WRAPPER] Apply Rollback Wrapper Started"
 echo "[WRAPPER] ========================================"
@@ -57,17 +81,20 @@ if [[ -z "${LOCATION_PATH}" || -z "${TARGET_HASH}" ]]; then
     exit 1
 fi
 
+# Step 1: Validate repository
+report_step "validate" "in_progress"
 echo "[WRAPPER] Validating repository location..."
 if [[ ! -d "${LOCATION_PATH}/.git" ]]; then
+    report_step "validate" "failed"
     echo "[WRAPPER] ERROR: Repository validation failed"
     echo "[WRAPPER] Path does not contain a .git directory"
     echo "ERROR: Invalid repository location: ${LOCATION_PATH}"
     exit 1
 fi
-echo "[WRAPPER] ✓ Repository location is valid"
 
 echo "[WRAPPER] Changing to repository directory..."
 cd "${LOCATION_PATH}" || {
+    report_step "validate" "failed"
     echo "[WRAPPER] ERROR: Failed to change directory"
     echo "ERROR: Could not access repository directory"
     exit 1
@@ -76,6 +103,7 @@ echo "[WRAPPER] ✓ Working directory: $(pwd)"
 
 echo "[WRAPPER] Verifying commit exists in repository..."
 if ! git rev-parse --verify "${TARGET_HASH}" >/dev/null 2>&1; then
+    report_step "validate" "failed"
     echo "[WRAPPER] ERROR: Commit verification failed"
     echo "[WRAPPER] Commit ${TARGET_HASH} not found in this repository"
     echo "ROLLBACK_FAILED"
@@ -83,7 +111,10 @@ if ! git rev-parse --verify "${TARGET_HASH}" >/dev/null 2>&1; then
     exit 1
 fi
 echo "[WRAPPER] ✓ Commit ${TARGET_HASH} verified"
+report_step "validate" "completed"
 
+# Step 2: Create backup branch
+report_step "backup" "in_progress"
 echo "[WRAPPER] Getting current HEAD for reference..."
 current_head=$(git rev-parse HEAD 2>&1)
 echo "[WRAPPER] Current HEAD: ${current_head}"
@@ -95,10 +126,16 @@ echo "[WRAPPER] Backup branch name: ${backup_branch}"
 git branch "${backup_branch}" "${current_head}" 2>/dev/null
 if [[ $? -eq 0 ]]; then
     echo "[WRAPPER] ✓ Backup branch created successfully: ${backup_branch}"
+    report_step "backup" "completed"
 else
-    echo "[WRAPPER] ⚠ WARNING: Failed to create backup branch, proceeding with rollback"
+    report_step "backup" "failed"
+    echo "[WRAPPER] ❌ Failed to create backup branch"
+    echo "ERROR: Failed to create backup branch"
+    exit 1
 fi
 
+# Step 3: Reset to target commit
+report_step "reset" "in_progress"
 echo "[WRAPPER] Executing git reset --hard ${TARGET_HASH}..."
 output=$(git reset --hard "${TARGET_HASH}" 2>&1)
 exit_code=$?
@@ -106,20 +143,48 @@ exit_code=$?
 echo "[WRAPPER] Git reset exit code: ${exit_code}"
 echo "[WRAPPER] Git reset output: ${output}"
 
-if [[ ${exit_code} -eq 0 ]]; then
-    new_head=$(git rev-parse HEAD 2>&1)
-    echo "[WRAPPER] ✓ Rollback successful"
-    echo "[WRAPPER] Previous HEAD: ${current_head}"
-    echo "[WRAPPER] New HEAD: ${new_head}"
+if [[ ${exit_code} -ne 0 ]]; then
+    report_step "reset" "failed"
+    echo "[WRAPPER] ❌ Rollback failed"
+    echo "[WRAPPER] Git error output: ${output}"
+    # Rollback the transaction
+    rollback_changes "${backup_branch}" "${current_head}"
+    echo "[WRAPPER] ========================================"
+    echo "ROLLBACK_FAILED"
+    echo "ERROR: git reset command failed - changes rolled back"
+    exit 1
+fi
+
+new_head=$(git rev-parse HEAD 2>&1)
+echo "[WRAPPER] ✓ Reset successful"
+echo "[WRAPPER] Previous HEAD: ${current_head}"
+echo "[WRAPPER] New HEAD: ${new_head}"
+report_step "reset" "completed"
+
+# Step 4: Push to remote
+report_step "push" "in_progress"
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+echo "[WRAPPER] Pushing to remote branch: ${current_branch}"
+
+git push --force-with-lease origin "${current_branch}" 2>/dev/null
+push_exit=$?
+
+if [[ ${push_exit} -eq 0 ]]; then
+    report_step "push" "completed"
+    echo "[WRAPPER] ✓ Successfully pushed to remote"
+    # Clean up backup branch on complete success
+    git branch -D "${backup_branch}" 2>/dev/null
     echo "[WRAPPER] ========================================"
     echo "ROLLBACK_SUCCESS: ${TARGET_HASH}"
     exit 0
 else
-    echo "[WRAPPER] ❌ Rollback failed"
-    echo "[WRAPPER] Git error output: ${output}"
+    report_step "push" "failed"
+    echo "[WRAPPER] ❌ Push to remote failed"
+    # Rollback the transaction
+    rollback_changes "${backup_branch}" "${current_head}"
     echo "[WRAPPER] ========================================"
     echo "ROLLBACK_FAILED"
-    echo "ERROR: git reset command failed: ${output}"
+    echo "ERROR: Push to remote failed - changes rolled back to maintain consistency"
     exit 1
 fi
 WRAPPER_END
