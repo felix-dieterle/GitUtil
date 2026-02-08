@@ -120,6 +120,72 @@ echo "Test Group: Invalid Commit Hash"
 assert_failure "Fails on invalid commit hash" \
     "$REVERT_SCRIPT '$TEST_DIR/test_repo' invalid_hash_12345"
 
+# Test 7: Backup branch creation
+echo ""
+echo "Test Group: Backup Branch Creation"
+# Setup: Create a fresh test repo with multiple commits
+git init -q "$TEST_DIR/test_backup_repo"
+cd "$TEST_DIR/test_backup_repo"
+git config user.email "test@example.com"
+git config user.name "Test User"
+
+# Create commits
+echo "v1" > file.txt
+git add file.txt
+git commit -q -m "Commit 1"
+BACKUP_FIRST=$(git rev-parse HEAD)
+
+echo "v2" > file.txt
+git add file.txt
+git commit -q -m "Commit 2"
+BACKUP_SECOND=$(git rev-parse HEAD)
+
+echo "v3" > file.txt
+git add file.txt
+git commit -q -m "Commit 3"
+BACKUP_THIRD=$(git rev-parse HEAD)
+
+cd - > /dev/null
+
+# Perform rollback from third to first commit
+$REVERT_SCRIPT "$TEST_DIR/test_backup_repo" "$BACKUP_FIRST" > /dev/null 2>&1
+
+# Check that a backup branch was created
+cd "$TEST_DIR/test_backup_repo"
+BACKUP_BRANCHES=$(git branch --list "backup/before-rollback-*" | wc -l)
+cd - > /dev/null
+
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$BACKUP_BRANCHES" -ge 1 ]; then
+    echo -e "${GREEN}✓${NC} PASS: Backup branch was created"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: No backup branch found"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+# Verify backup branch points to the correct commit (the third commit, before rollback)
+cd "$TEST_DIR/test_backup_repo"
+BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | head -1 | tr -d ' ')
+if [ -n "$BACKUP_BRANCH_NAME" ]; then
+    BACKUP_BRANCH_COMMIT=$(git rev-parse "$BACKUP_BRANCH_NAME")
+    cd - > /dev/null
+    
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$BACKUP_BRANCH_COMMIT" = "$BACKUP_THIRD" ]; then
+        echo -e "${GREEN}✓${NC} PASS: Backup branch points to correct commit (pre-rollback HEAD)"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}✗${NC} FAIL: Backup branch points to wrong commit (expected $BACKUP_THIRD, got $BACKUP_BRANCH_COMMIT)"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+else
+    cd - > /dev/null
+    TESTS_RUN=$((TESTS_RUN + 1))
+    echo -e "${RED}✗${NC} FAIL: Could not verify backup branch commit (no backup branch name found)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
 teardown
 
 # Print summary and exit
