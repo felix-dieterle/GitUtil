@@ -28,6 +28,7 @@ GitUtil provides shell-based tools for navigating commit history and reverting b
 - Browse git repositories on any device
 - View complete commit timeline
 - Revert branch to any historical commit
+- **Automatic backup branches** - Creates timestamped backup branches before rollback
 - Safe operations with confirmation prompts
 
 ## Project Structure
@@ -156,7 +157,7 @@ The interactive UI provides:
 - **Auto-clone support** - Automatically clone remote repositories
 - **Default workspace** - Repositories cloned to `~/.gitutil/repos/` by default
 - **Commit timeline** - View commit history with full details
-- **Safe branch revert** - Confirmation prompts before destructive operations
+- **Safe branch revert** - Automatic backup branches created before rollback operations
 - **Color-coded output** - Visual feedback with success/warning/info messages
 
 #### UI Features:
@@ -165,8 +166,39 @@ The interactive UI provides:
    - Remote URLs: `https://github.com/user/repo.git`, `git@github.com:user/repo.git`
    - Repositories are automatically cloned to `~/.gitutil/repos/` if they don't exist locally
 2. **View commit history** - See all commits with hash, author, timestamp, and message
-3. **Revert branch to commit** - Safely reset your branch to any previous commit
+3. **Revert branch to commit** - Safely reset your branch to any previous commit with automatic backup
 4. **Exit** - Close the application
+
+#### Automatic Backup Branches
+
+**NEW:** GitUtil now automatically creates a backup branch before any rollback operation!
+
+When you revert to an earlier commit, GitUtil creates a backup branch with the format:
+```
+backup/before-rollback-YYYYMMDD_HHMMSS
+```
+
+This backup branch points to the state of your repository **before** the rollback, allowing you to:
+- Easily recover if you made a mistake
+- Review what was lost during the rollback
+- Switch back to the previous state with a simple `git checkout`
+
+**Example:**
+```bash
+# Before rollback: You're on commit 5
+# GitUtil creates: backup/before-rollback-20260208_193814 (points to commit 5)
+# After rollback: You're on commit 2
+
+# To recover to the pre-rollback state:
+git checkout backup/before-rollback-20260208_193814
+# Or create a new branch from it:
+git checkout -b recovery backup/before-rollback-20260208_193814
+```
+
+The backup is created automatically in all interfaces:
+- Terminal UI (`gitutil.sh`)
+- Mobile Web UI (Termux)
+- Android APK (standalone app)
 
 #### Auto-Clone Functionality
 

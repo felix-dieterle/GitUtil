@@ -144,6 +144,26 @@ public class GitBridge {
                 ObjectId currentHead = repository.resolve("HEAD");
                 Log.i(TAG, "Current HEAD: " + (currentHead != null ? currentHead.getName() : "unknown"));
                 
+                // Create backup branch before rollback
+                if (currentHead != null) {
+                    // SimpleDateFormat created locally for immediate use - thread-safe in this context
+                    SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+                    String timestamp = timestampFormat.format(new Date());
+                    String backupBranchName = "backup/before-rollback-" + timestamp;
+                    Log.i(TAG, "Creating backup branch: " + backupBranchName);
+                    
+                    try {
+                        git.branchCreate()
+                            .setName(backupBranchName)
+                            .setStartPoint(currentHead.getName())
+                            .call();
+                        Log.i(TAG, "✓ Backup branch created successfully: " + backupBranchName);
+                    } catch (Exception branchEx) {
+                        Log.w(TAG, "⚠ WARNING: Failed to create backup branch, proceeding with rollback");
+                        Log.w(TAG, "Backup branch error: " + (branchEx.getMessage() != null ? branchEx.getMessage() : "unknown"));
+                    }
+                }
+                
                 Log.i(TAG, "Executing hard reset to: " + commitHash);
                 git.reset()
                     .setMode(ResetCommand.ResetType.HARD)

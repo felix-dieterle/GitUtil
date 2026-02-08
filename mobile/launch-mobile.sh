@@ -88,6 +88,17 @@ echo "[WRAPPER] Getting current HEAD for reference..."
 current_head=$(git rev-parse HEAD 2>&1)
 echo "[WRAPPER] Current HEAD: ${current_head}"
 
+echo "[WRAPPER] Creating backup branch before rollback..."
+timestamp=$(date +%Y%m%d_%H%M%S)
+backup_branch="backup/before-rollback-${timestamp}"
+echo "[WRAPPER] Backup branch name: ${backup_branch}"
+git branch "${backup_branch}" "${current_head}" 2>/dev/null
+if [[ $? -eq 0 ]]; then
+    echo "[WRAPPER] ✓ Backup branch created successfully: ${backup_branch}"
+else
+    echo "[WRAPPER] ⚠ WARNING: Failed to create backup branch, proceeding with rollback"
+fi
+
 echo "[WRAPPER] Executing git reset --hard ${TARGET_HASH}..."
 output=$(git reset --hard "${TARGET_HASH}" 2>&1)
 exit_code=$?

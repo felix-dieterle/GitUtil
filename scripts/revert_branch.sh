@@ -18,6 +18,20 @@ fi
 
 cd "$REPO_PATH" || exit 1
 
+# Create backup branch with timestamp before rollback
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null)
+if [ -n "$CURRENT_HEAD" ]; then
+    BACKUP_BRANCH="backup/before-rollback-${TIMESTAMP}"
+    echo "Creating backup branch: $BACKUP_BRANCH"
+    git branch "$BACKUP_BRANCH" "$CURRENT_HEAD" 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "Backup branch created successfully"
+    else
+        echo "WARNING: Failed to create backup branch, proceeding with rollback"
+    fi
+fi
+
 echo "Reverting branch to commit: $COMMIT_HASH"
 git reset --hard "$COMMIT_HASH"
 
