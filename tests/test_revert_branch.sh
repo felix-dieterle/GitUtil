@@ -81,9 +81,17 @@ cd - > /dev/null
 
 assert_success "Successfully reverts to valid commit" \
     "$REVERT_SCRIPT '$TEST_DIR/test_repo' $FIRST_COMMIT"
-assert_output_contains "Shows success message" \
-    "$REVERT_SCRIPT '$TEST_DIR/test_repo' $THIRD_COMMIT" \
-    "SUCCESS"
+# Note: May show SUCCESS (if remote push succeeds) or WARNING (if no remote configured)
+# Both are valid outcomes - the key is that the local revert succeeds
+TESTS_RUN=$((TESTS_RUN + 1))
+OUTPUT=$($REVERT_SCRIPT "$TEST_DIR/test_repo" "$THIRD_COMMIT" 2>&1)
+if echo "$OUTPUT" | grep -qE "(SUCCESS|WARNING)"; then
+    echo -e "${GREEN}✓${NC} PASS: Shows completion message (SUCCESS or WARNING)"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Does not show completion message"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
 
 # Test 4: Verify revert actually worked
 echo ""
@@ -184,6 +192,77 @@ else
     cd - > /dev/null
     TESTS_RUN=$((TESTS_RUN + 1))
     echo -e "${RED}✗${NC} FAIL: Could not verify backup branch commit (no backup branch name found)"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+# Test 8: Push functionality with remote repository
+echo ""
+echo "Test Group: Push Functionality"
+# Create a bare repository to act as remote
+git init -q --bare "$TEST_DIR/remote_repo.git"
+
+# Create a local repository
+git init -q "$TEST_DIR/local_repo"
+cd "$TEST_DIR/local_repo"
+git config user.email "test@example.com"
+git config user.name "Test User"
+
+# Add remote
+git remote add origin "$TEST_DIR/remote_repo.git"
+
+# Create commits
+echo "v1" > file.txt
+git add file.txt
+git commit -q -m "Commit 1"
+REMOTE_FIRST=$(git rev-parse HEAD)
+
+echo "v2" > file.txt
+git add file.txt
+git commit -q -m "Commit 2"
+
+echo "v3" > file.txt
+git add file.txt
+git commit -q -m "Commit 3"
+REMOTE_THIRD=$(git rev-parse HEAD)
+
+# Push to remote - try main branch first, then master
+PUSH_OUTPUT=$(git push -q origin main 2>&1 || git push -q origin master 2>&1)
+if [ $? -ne 0 ]; then
+    echo "Test setup error: Failed to push to remote"
+    echo "$PUSH_OUTPUT"
+fi
+
+cd - > /dev/null
+
+# Perform rollback to first commit
+OUTPUT=$($REVERT_SCRIPT "$TEST_DIR/local_repo" "$REMOTE_FIRST" 2>&1)
+
+# Check that SUCCESS message is shown (not WARNING, since remote exists)
+TESTS_RUN=$((TESTS_RUN + 1))
+if echo "$OUTPUT" | grep -q "SUCCESS.*pushed to remote"; then
+    echo -e "${GREEN}✓${NC} PASS: Shows SUCCESS message when push succeeds"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Does not show SUCCESS message for successful push"
+    echo "Output was: $OUTPUT"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+# Verify the remote was actually updated
+cd "$TEST_DIR/local_repo"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+cd - > /dev/null
+
+cd "$TEST_DIR/remote_repo.git"
+REMOTE_HEAD=$(git rev-parse "$CURRENT_BRANCH" 2>/dev/null)
+cd - > /dev/null
+
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$REMOTE_HEAD" = "$REMOTE_FIRST" ]; then
+    echo -e "${GREEN}✓${NC} PASS: Remote repository was updated to rollback commit"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Remote repository was not updated (expected $REMOTE_FIRST, got $REMOTE_HEAD)"
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 

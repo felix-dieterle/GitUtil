@@ -35,10 +35,27 @@ fi
 echo "Reverting branch to commit: $COMMIT_HASH"
 git reset --hard "$COMMIT_HASH"
 
-if [ $? -eq 0 ]; then
-    echo "SUCCESS: Branch reverted to $COMMIT_HASH"
-    exit 0
-else
+if [ $? -ne 0 ]; then
     echo "ERROR: Failed to revert branch"
     exit 1
+fi
+
+# Push the changes to remote
+echo "Pushing changes to remote..."
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# Note: --force-with-lease provides safety by checking that the remote branch
+# matches the state of the local tracking branch. For stronger guarantees in
+# distributed workflows, you may want to use: --force-with-lease=<refname>:<expected-value>
+git push --force-with-lease origin "$CURRENT_BRANCH"
+
+if [ $? -eq 0 ]; then
+    echo "SUCCESS: Branch reverted to $COMMIT_HASH and pushed to remote"
+    exit 0
+else
+    echo "WARNING: Branch reverted locally to $COMMIT_HASH, but push to remote failed"
+    echo "The local rollback was successful, but the remote repository was not updated."
+    echo "You may need to push manually with: git push --force-with-lease origin $CURRENT_BRANCH"
+    # Exit with 0 since the primary operation (local rollback) succeeded
+    # The push is a secondary operation that can be completed manually later
+    exit 0
 fi

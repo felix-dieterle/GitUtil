@@ -116,6 +116,17 @@ public class GitBridge {
         }
     }
 
+    /**
+     * Apply rollback to a specific commit
+     * 
+     * NOTE: This Android/JGit implementation performs local rollback only.
+     * The shell script version (revert_branch.sh) also pushes changes to remote.
+     * Push functionality can be added using JGit's PushCommand if needed.
+     * 
+     * @param path Repository path
+     * @param commitHash Target commit hash
+     * @return JSON response with success or error
+     */
     private String applyRollback(String path, String commitHash) {
         // Create SimpleDateFormat locally to ensure thread safety
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
