@@ -948,8 +948,8 @@ console.log('[ROLLBACK] ========================================');
 Nodes.progressTracker.classList.remove('screen-off');
 resetProgressTracker();
 
-setBusy(Nodes.rollbackBtn,true);
 showGlobalLoading('Performing rollback...','Reverting to selected commit');
+setBusy(Nodes.rollbackBtn,true);
 try{
 console.log('[ROLLBACK] Calling wrapper: apply-rollback');
 console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked]);
