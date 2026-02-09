@@ -486,13 +486,24 @@ public class GitBridge {
                 return createErrorResponse("Path is not a directory: " + path);
             }
             
+            // Security: Resolve canonical path to prevent directory traversal
+            String canonicalPath = repoDir.getCanonicalPath();
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            String workspaceCanonicalPath = workspaceDir.getCanonicalPath();
+            
+            // Verify the repository is within the workspace to prevent deleting arbitrary files
+            if (!canonicalPath.startsWith(workspaceCanonicalPath)) {
+                Log.w(TAG, "Attempted to delete repository outside workspace: " + canonicalPath);
+                return createErrorResponse("Security: Can only delete repositories within workspace");
+            }
+            
             // Verify it's a git repository
             File gitDir = new File(repoDir, ".git");
             if (!gitDir.exists() || !gitDir.isDirectory()) {
                 return createErrorResponse("Not a git repository: " + path);
             }
             
-            Log.i(TAG, "Deleting repository: " + path);
+            Log.i(TAG, "Deleting repository: " + canonicalPath);
             
             // Delete the repository recursively
             if (deleteRecursively(repoDir)) {

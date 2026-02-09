@@ -959,7 +959,7 @@ if(!WidgetState.loc){
 showMsg(Nodes.rollbackMsg,'No repository loaded','bad');
 return;
 }
-const repoName=WidgetState.loc.split('/').pop();
+const repoName=WidgetState.loc.replace(/\/+$/,'').split('/').pop()||'repository';
 if(!confirm(`⚠️ WARNING: This will permanently delete the repository from your device.\n\nRepository: ${repoName}\nPath: ${WidgetState.loc}\n\nThis action cannot be undone. Continue?`)){
 return;
 }
@@ -969,7 +969,9 @@ try{
 const result=await callWrapper('cleanup-repository',[WidgetState.loc]);
 if(result.success){
 showMsg(Nodes.rollbackMsg,'✅ Repository deleted successfully','good');
-WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
+WidgetState.loc='';
+WidgetState.snapshots=[];
+WidgetState.picked=null;
 setTimeout(()=>{
 switchView(Nodes.repoSelector);
 refreshRepoList();
