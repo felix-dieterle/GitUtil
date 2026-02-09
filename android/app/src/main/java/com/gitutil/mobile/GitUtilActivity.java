@@ -144,6 +144,10 @@ public class GitUtilActivity extends AppCompatActivity {
         webView = new WebView(this);
         setContentView(webView);
 
+        // Enable hardware acceleration for smooth CSS animations (e.g., loading spinner)
+        // This is essential for the loading indicator to be visible and animate properly
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+
         // Configure WebView settings
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
