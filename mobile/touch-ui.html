@@ -271,6 +271,9 @@ Enter your GitHub Personal Access Token to browse and clone your repositories.
 <div class="btn-row">
 <button id="viewLogsBtn" class="action-btn btn-secondary">📋 View Logs</button>
 </div>
+<div class="btn-row">
+<button id="cleanupBtn" class="action-btn btn-danger">🗑️ Cleanup Repo</button>
+</div>
 </div>
 <div id="rollbackMsg"></div>
 </div>
@@ -367,6 +370,7 @@ pathDisplay:document.getElementById('pathDisplay'),
 snapshotList:document.getElementById('snapshotList'),
 rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
+cleanupBtn:document.getElementById('cleanupBtn'),
 rollbackMsg:document.getElementById('rollbackMsg'),
 viewLogsBtn:document.getElementById('viewLogsBtn'),
 // Progress tracker
@@ -943,6 +947,44 @@ Nodes.switchBtn.onclick=()=>{
 WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
 switchView(Nodes.repoSelector);
 refreshRepoList();
+};
+
+// Cleanup button
+Nodes.cleanupBtn.onclick=async()=>{
+if(!WidgetState.loc){
+showMsg(Nodes.rollbackMsg,'No repository selected','bad');
+return;
+}
+const repoPath=WidgetState.loc;
+const repoName=repoPath.split('/').filter(p=>p).pop();
+if(!confirm(`⚠️ Delete repository permanently?\n\nThis will remove:\n${repoPath}\n\nAll local changes and commits will be lost.\n\nType 'yes' to confirm.`)){
+return;
+}
+setBusy(Nodes.cleanupBtn,true);
+hideMsg(Nodes.rollbackMsg);
+console.log(`[CLEANUP] Starting cleanup for: ${repoPath}`);
+try{
+const result=await callWrapper('cleanup-repository',[repoPath]);
+if(result.success){
+console.log('[CLEANUP] Repository deleted successfully');
+showMsg(Nodes.rollbackMsg,`Repository deleted: ${repoName}`,'good');
+WidgetState.loc='';
+WidgetState.snapshots=[];
+WidgetState.picked=null;
+setTimeout(()=>{
+switchView(Nodes.repoSelector);
+refreshRepoList();
+},2000);
+}else{
+console.error('[CLEANUP] Failed:',result.output);
+showMsg(Nodes.rollbackMsg,`Cleanup failed: ${result.output}`,'bad');
+}
+}catch(err){
+console.error('[CLEANUP] Error:',err);
+showMsg(Nodes.rollbackMsg,`Error: ${err.message}`,'bad');
+}finally{
+setBusy(Nodes.cleanupBtn,false);
+}
 };
 
 // View logs button
