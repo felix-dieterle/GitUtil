@@ -4,6 +4,7 @@ import android.util.Log;
 import android.webkit.JavascriptInterface;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
@@ -252,7 +253,8 @@ public class GitBridge {
                     try {
                         // Push with force since we're intentionally rewriting history
                         // The rollback operation is an explicit user action to remove commits
-                        var pushCommand = git.push()
+                        // Using explicit PushCommand type for Java 8 compatibility
+                        PushCommand pushCommand = git.push()
                             .setRemote("origin")
                             .setRefSpecs(new RefSpec(currentBranch + ":" + currentBranch))
                             .setForce(true);
