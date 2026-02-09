@@ -71,6 +71,8 @@ margin-bottom:calc(var(--gap)*1.5);cursor:pointer;transition:all 0.15s;position:
 }
 .snapshot-card:active{background:#dde5ed;border-color:var(--sky-500)}
 .snapshot-card.active-pick{border-color:var(--sky-600);background:#d4e7f5}
+.snapshot-card.filter-match{border-color:var(--fire-500);border-width:3px;box-shadow:0 0 0 2px rgba(247,127,0,0.2)}
+.snapshot-card.filter-dimmed{opacity:0.4}
 .snapshot-card__hash{
 font-family:'Courier New',monospace;font-size:13px;
 color:var(--ink-500);margin-bottom:calc(var(--gap)*0.5)
@@ -556,34 +558,37 @@ return repo;
 }).filter(r=>r.name&&r.url);
 };
 
-const filterSnapshots=(snaps,filterText)=>{
+const checkSnapshotMatch=(snap,filterText)=>{
 if(!filterText||filterText.trim()===''){
-return snaps;
+return true;
 }
 const lowerFilter=filterText.toLowerCase().trim();
-return snaps.filter(s=>{
 // Search in commit message, author, or hash
-return (s.title||'').toLowerCase().includes(lowerFilter)||
-(s.who||'').toLowerCase().includes(lowerFilter)||
-(s.hash||'').toLowerCase().includes(lowerFilter)||
-(s.short||'').toLowerCase().includes(lowerFilter);
-});
+return (snap.title||'').toLowerCase().includes(lowerFilter)||
+(snap.who||'').toLowerCase().includes(lowerFilter)||
+(snap.hash||'').toLowerCase().includes(lowerFilter)||
+(snap.short||'').toLowerCase().includes(lowerFilter);
 };
 
 const renderSnapshots=(snaps,filterText='')=>{
-const filteredSnaps=filterSnapshots(snaps,filterText);
 Nodes.snapshotList.innerHTML='';
-if(filteredSnaps.length===0){
-if(filterText&&filterText.trim()!==''){
-Nodes.snapshotList.innerHTML='<div class="void-box"><div class="void-box__icon">🔍</div><div>No commits match your filter</div></div>';
-}else{
+if(snaps.length===0){
 Nodes.snapshotList.innerHTML='<div class="void-box"><div class="void-box__icon">📭</div><div>No snapshots found</div></div>';
-}
 return;
 }
-filteredSnaps.forEach(s=>{
+const hasFilter=filterText&&filterText.trim()!=='';
+snaps.forEach(s=>{
+const isMatch=checkSnapshotMatch(s,filterText);
 const card=document.createElement('div');
 card.className='snapshot-card';
+// Add highlight class if there's a filter and this commit matches
+if(hasFilter&&isMatch){
+card.classList.add('filter-match');
+}
+// Dim non-matching commits when filter is active
+if(hasFilter&&!isMatch){
+card.classList.add('filter-dimmed');
+}
 card.dataset.hash=s.hash;
 card.innerHTML=`
 <div class="snapshot-card__hash">${s.short}</div>
