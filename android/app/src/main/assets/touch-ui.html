@@ -132,9 +132,40 @@ font-size:13px;line-height:1.4;max-height:120px;
 overflow-y:auto;display:none
 }
 .progress-details.visible{display:block}
+.global-loading-overlay{
+position:fixed;top:0;left:0;right:0;bottom:0;
+background:rgba(0,0,0,0.6);z-index:9999;
+display:none;align-items:center;justify-content:center;
+backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)
+}
+.global-loading-overlay.visible{display:flex}
+.global-loading-content{
+background:var(--pearl-50);border-radius:var(--curve);
+padding:calc(var(--gap)*4);text-align:center;
+box-shadow:0 8px 24px rgba(0,0,0,0.3);min-width:200px
+}
+.global-loading-spinner{
+width:48px;height:48px;border:5px solid var(--pearl-100);
+border-top-color:var(--sky-500);border-radius:50%;
+animation:rotate-spin 0.8s linear infinite;margin:0 auto calc(var(--gap)*2) auto
+}
+.global-loading-text{
+font-size:16px;font-weight:600;color:var(--ink-900);margin-bottom:var(--gap)
+}
+.global-loading-subtext{
+font-size:13px;color:var(--ink-500)
+}
 </style>
 </head>
 <body>
+<!-- Global Loading Overlay -->
+<div id="globalLoadingOverlay" class="global-loading-overlay">
+<div class="global-loading-content">
+<div class="global-loading-spinner"></div>
+<div class="global-loading-text">Processing...</div>
+<div class="global-loading-subtext">Please wait</div>
+</div>
+</div>
 <div class="widget-shell">
 <header class="masthead">
 <h1>GitUtil Mobile</h1>
@@ -379,7 +410,11 @@ logViewer:document.getElementById('logViewer'),
 logContent:document.getElementById('logContent'),
 refreshLogsBtn:document.getElementById('refreshLogsBtn'),
 clearLogsBtn:document.getElementById('clearLogsBtn'),
-closeLogsBtn:document.getElementById('closeLogsBtn')
+closeLogsBtn:document.getElementById('closeLogsBtn'),
+// Global loading overlay
+globalLoadingOverlay:document.getElementById('globalLoadingOverlay'),
+globalLoadingText:null,
+globalLoadingSubtext:null
 };
 
 const escapeHtml=(text)=>{
@@ -415,6 +450,33 @@ btn.classList.remove('btn-locked');
 if(btn.dataset.orig)btn.innerHTML=btn.dataset.orig;
 }
 };
+
+// Global loading overlay functions
+let loadingOverlayCount=0;
+const showGlobalLoading=(text='Processing...',subtext='Please wait')=>{
+if(!Nodes.globalLoadingText){
+Nodes.globalLoadingText=Nodes.globalLoadingOverlay.querySelector('.global-loading-text');
+Nodes.globalLoadingSubtext=Nodes.globalLoadingOverlay.querySelector('.global-loading-subtext');
+}
+Nodes.globalLoadingText.textContent=text;
+Nodes.globalLoadingSubtext.textContent=subtext;
+loadingOverlayCount++;
+if(loadingOverlayCount===1){
+Nodes.globalLoadingOverlay.classList.add('visible');
+}
+console.log(`[LOADING] Showing global loading (count: ${loadingOverlayCount}): ${text}`);
+};
+
+const hideGlobalLoading=()=>{
+loadingOverlayCount=Math.max(0,loadingOverlayCount-1);
+if(loadingOverlayCount===0){
+Nodes.globalLoadingOverlay.classList.remove('visible');
+console.log('[LOADING] Global loading hidden');
+}else{
+console.log(`[LOADING] Global loading still active (count: ${loadingOverlayCount})`);
+}
+};
+
 const callWrapper=async(wrapperName,args=[])=>{
 console.log(`[GitUtil] Calling wrapper: ${wrapperName}`, args);
 try{
@@ -557,11 +619,13 @@ Nodes.githubRepoList.appendChild(card);
 const loadRepository=async(path)=>{
 console.log('[UI] Loading repository:', path);
 showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repository...','info');
+showGlobalLoading('Loading repository...','Fetching commit history');
 try{
 const checkRes=await callWrapper('check-location',[path]);
 if(!checkRes.success||!checkRes.output.includes('VALID')){
 console.error('[UI] Repository validation failed:', path);
 showMsg(Nodes.repoMsg,'Invalid repository','bad');
+hideGlobalLoading();
 return;
 }
 console.log('[UI] Repository validated successfully');
@@ -583,11 +647,15 @@ showMsg(Nodes.repoMsg,'Failed to load commits','bad');
 }
 }catch(e){
 showMsg(Nodes.repoMsg,`Error: ${e.message}`,'bad');
+}finally{
+hideGlobalLoading();
 }
 };
 
 const refreshRepoList=async()=>{
 showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repositories...','info');
+showGlobalLoading('Loading repositories...','Scanning workspace');
+try{
 const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
 if(listRes.success){
 WidgetState.repos=parseRepos(listRes.output);
@@ -596,10 +664,15 @@ hideMsg(Nodes.repoMsg);
 }else{
 showMsg(Nodes.repoMsg,'Failed to load repositories','bad');
 }
+}finally{
+hideGlobalLoading();
+}
 };
 
 const initWorkspace=async()=>{
 showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Initializing workspace...','info');
+showGlobalLoading('Initializing workspace...','Setting up GitUtil');
+try{
 const wsRes=await callWrapper('ensure-workspace',[]);
 if(wsRes.success){
 const match=wsRes.output.match(/:(.*)/);
@@ -610,6 +683,9 @@ await refreshRepoList();
 }
 }else{
 showMsg(Nodes.repoMsg,'Failed to initialize workspace','bad');
+}
+}finally{
+hideGlobalLoading();
 }
 };
 
@@ -632,6 +708,7 @@ return;
 }
 hideMsg(Nodes.githubAuthMsg);
 setBusy(Nodes.githubAuthBtn,true);
+showGlobalLoading('Connecting to GitHub...','Fetching repositories');
 try{
 const listRes=await callWrapper('list-github-repos',[token]);
 if(listRes.success&&listRes.output.includes('GITHUB_REPOS_BEGIN')){
@@ -648,6 +725,7 @@ showMsg(Nodes.githubAuthMsg,listRes.output||'Failed to connect to GitHub','bad')
 showMsg(Nodes.githubAuthMsg,`Error: ${e.message}`,'bad');
 }finally{
 setBusy(Nodes.githubAuthBtn,false);
+hideGlobalLoading();
 }
 };
 
@@ -665,6 +743,7 @@ switchView(Nodes.repoSelector);
 const cloneGitHubRepo=async(url,name)=>{
 hideMsg(Nodes.githubBrowserMsg);
 showMsg(Nodes.githubBrowserMsg,`<span class="spin-wheel"></span> Cloning ${name}...`,'info');
+showGlobalLoading(`Cloning ${name}...`,'This may take a few minutes');
 try{
 const cloneRes=await callWrapper('clone-repository',[url,name]);
 if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
@@ -682,6 +761,8 @@ showMsg(Nodes.githubBrowserMsg,cloneRes.output||'Clone failed','bad');
 }
 }catch(e){
 showMsg(Nodes.githubBrowserMsg,`Error: ${e.message}`,'bad');
+}finally{
+hideGlobalLoading();
 }
 };
 
@@ -703,6 +784,7 @@ return;
 }
 hideMsg(Nodes.cloneMsg);
 setBusy(Nodes.cloneConfirmBtn,true);
+showGlobalLoading('Cloning repository...','This may take a few minutes');
 try{
 const cloneRes=await callWrapper('clone-repository',name?[url,name]:[url]);
 if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
@@ -722,6 +804,7 @@ showMsg(Nodes.cloneMsg,cloneRes.output||'Clone failed','bad');
 showMsg(Nodes.cloneMsg,`Error: ${e.message}`,'bad');
 }finally{
 setBusy(Nodes.cloneConfirmBtn,false);
+hideGlobalLoading();
 }
 };
 
@@ -744,6 +827,7 @@ const loc=Nodes.locationBox.value.trim();
 if(!loc){showMsg(Nodes.locationMsg,'Please enter a path','bad');return;}
 hideMsg(Nodes.locationMsg);
 setBusy(Nodes.verifyBtn,true);
+showGlobalLoading('Verifying repository...','Checking location and loading commits');
 try{
 const res=await callWrapper('check-location',[loc]);
 if(res.success&&res.output.includes('VALID')){
@@ -766,6 +850,7 @@ showMsg(Nodes.locationMsg,'Invalid repository location','bad');
 showMsg(Nodes.locationMsg,`Error: ${e.message}`,'bad');
 }finally{
 setBusy(Nodes.verifyBtn,false);
+hideGlobalLoading();
 }
 };
 
@@ -869,6 +954,7 @@ resetProgressTracker();
 
 showMsg(Nodes.rollbackMsg,'⏳ Initiating rollback operation...','info');
 setBusy(Nodes.rollbackBtn,true);
+showGlobalLoading('Performing rollback...','Reverting to selected commit');
 try{
 console.log('[ROLLBACK] Calling wrapper: apply-rollback');
 console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked]);
@@ -934,6 +1020,7 @@ const displayMsg=`❌ Error during rollback\n\n${e.message}\n\nTip: Use "View Lo
 showMsg(Nodes.rollbackMsg,displayMsg.replace(/\n/g,'<br>'),'bad');
 }finally{
 setBusy(Nodes.rollbackBtn,false);
+hideGlobalLoading();
 console.log('[ROLLBACK] ========================================');
 console.log('[ROLLBACK] Rollback operation completed');
 console.log('[ROLLBACK] ========================================');
@@ -965,6 +1052,7 @@ return;
 }
 setBusy(Nodes.cleanupBtn,true);
 hideMsg(Nodes.rollbackMsg);
+showGlobalLoading('Deleting repository...','Removing files from workspace');
 try{
 const result=await callWrapper('cleanup-repository',[WidgetState.loc]);
 if(result.success){
@@ -984,6 +1072,7 @@ showMsg(Nodes.rollbackMsg,`❌ Error: ${err.message}`,'bad');
 console.error('[GitUtil] Cleanup error:',err);
 }finally{
 setBusy(Nodes.cleanupBtn,false);
+hideGlobalLoading();
 }
 };
 
