@@ -21,7 +21,7 @@ import androidx.core.content.ContextCompat;
 
 /**
  * WebView-based activity for GitUtil Mobile interface
- * Provides standalone git operations without Termux
+ * Provides standalone git operations using JGit
  */
 public class GitUtilActivity extends AppCompatActivity {
     

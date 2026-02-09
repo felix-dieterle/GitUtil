@@ -77,12 +77,15 @@ This implementation adds automatic workspace management to GitUtil Mobile, makin
   - Custom path option (legacy support)
   - Improved navigation flow
 
-### Termux Support
-- **launch-mobile.sh**: New wrapper scripts
-  - `ensure-workspace.sh`
-  - `list-repositories.sh`
-  - `clone-repository.sh`
-  - `get-default-workspace.sh`
+### Android App Implementation
+- **GitBridge.java**: JGit wrapper methods
+  - `checkLocation()`
+  - `pullTimeline()`
+  - `applyRollback()`
+  - `cloneRepository()`
+  - `listRepositories()`
+  - `ensureWorkspace()`
+  - `getDefaultWorkspace()`
 
 ## Benefits
 

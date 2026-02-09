@@ -9,136 +9,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  package-mobile-ui:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Extract version from tag
-        id: extract_version
-        run: |
-          if [[ "${GITHUB_REF}" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
-          else
-            echo "version=dev-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Assemble mobile package
-        run: |
-          PKG_NAME="gitutil-mobile-${{ steps.extract_version.outputs.version }}"
-          mkdir -p "dist/${PKG_NAME}"
-          
-          cp -r mobile "dist/${PKG_NAME}/"
-          cp -r scripts "dist/${PKG_NAME}/"
-          cp README.md "dist/${PKG_NAME}/"
-          
-          cat > "dist/${PKG_NAME}/INSTALL.txt" << 'INSTRUCTIONS'
-          GitUtil Mobile - Installation Instructions
-          ==========================================
-          
-          For Android (Termux):
-          --------------------
-          1. Install Termux from F-Droid
-          2. Install required packages:
-             pkg install git bash python
-          
-          3. Extract this package to your device:
-             unzip gitutil-mobile-*.zip
-             cd gitutil-mobile-*
-          
-          4. Launch the mobile interface:
-             bash mobile/launch-mobile.sh
-          
-          5. The interface will open at http://localhost:8765
-             Keep the terminal open while using the interface
-          
-          Usage:
-          ------
-          - Enter your git repository path (e.g., /sdcard/repos/myproject)
-          - Browse commit snapshots
-          - Tap a snapshot to select it
-          - Use "Apply Rollback" to reset your branch
-          
-          Tips:
-          -----
-          - Bookmark http://localhost:8765 for quick access
-          - The interface remembers your last repository path
-          - Keep the terminal running (bridge server must be active)
-          - Press Ctrl+C in the terminal to stop the server
-          
-          Support:
-          --------
-          See README.md for full documentation
-          INSTRUCTIONS
-          
-          cd dist
-          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
-          tar -czf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
-          
-          echo "Package created: ${PKG_NAME}"
-          ls -lh "${PKG_NAME}".{zip,tar.gz}
-      
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum gitutil-mobile-*.zip > checksums.txt
-          sha256sum gitutil-mobile-*.tar.gz >> checksums.txt
-          cat checksums.txt
-      
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.extract_version.outputs.version }}
-          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', steps.extract_version.outputs.version) || format('Development Build {0}', steps.extract_version.outputs.version) }}
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          files: |
-            dist/gitutil-mobile-*.zip
-            dist/gitutil-mobile-*.tar.gz
-            dist/checksums.txt
-          body: |
-            ## GitUtil Mobile Release ${{ steps.extract_version.outputs.version }}
-            
-            ### 📱 Mobile Web Interface for Android
-            
-            This release includes a mobile-friendly web interface designed for Android devices running Termux.
-            
-            **Features:**
-            - Touch-optimized UI with large tap targets
-            - Repository validation and browsing
-            - Visual commit timeline
-            - One-tap branch rollback
-            - Offline-capable HTML interface
-            
-            **Installation:**
-            1. Download `gitutil-mobile-${{ steps.extract_version.outputs.version }}.zip`
-            2. Extract on your Android device
-            3. Run: `pkg install git bash python` (in Termux)
-            4. Run: `bash mobile/launch-mobile.sh`
-            5. Access at http://localhost:8765
-            
-            **Requirements:**
-            - Android device with Termux installed
-            - Git, Bash, and Python 3 packages
-            - Web browser
-            
-            See the included README.md for complete documentation.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-packages
-          path: |
-            dist/gitutil-mobile-*.zip
-            dist/gitutil-mobile-*.tar.gz
-            dist/checksums.txt
-          retention-days: 90
-  
   build-apk:
     runs-on: ubuntu-latest
     permissions:
@@ -272,12 +142,14 @@ jobs:
             
             ### 📱 Android Installation Package
             
-            This APK provides easy installation of GitUtil Mobile launcher on Android devices.
+            This APK provides a standalone GitUtil app for Android with built-in git support.
             
-            **What it does:**
-            - Provides direct links to install Termux from F-Droid
-            - Direct links to download GitUtil packages
-            - Quick access to setup instructions
+            **Features:**
+            - Built-in git operations using JGit
+            - Touch-optimized interface
+            - Clone repositories from URLs
+            - Repository browser
+            - No external dependencies required
             - Beautiful Material Design interface
             
             **Installation:**
@@ -286,13 +158,12 @@ jobs:
                - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
                - **Android 7.x**: Settings → Security → Unknown Sources
             3. Open the APK file to install
-            4. Follow the in-app instructions to complete setup
-            
-            **Note:** This APK is a launcher/installer helper. The actual GitUtil functionality runs in Termux.
+            4. Launch the app and tap "🚀 Launch GitUtil"
+            5. Grant storage permission when prompted
             
             **Requirements:**
             - Android 7.0 (API 24) or higher
-            - Termux (will guide you to install from F-Droid)
-            - Git, Bash, and Python packages in Termux
+            - About 10 MB of storage space
+            - That's it! No external dependencies needed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

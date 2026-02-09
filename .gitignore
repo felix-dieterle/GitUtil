@@ -1,5 +1,16 @@
 *.backup
 
-# Mobile wrapper artifacts (generated at runtime)
-mobile/wrappers/
-mobile/.bridge.pid
+# Java compiler artifacts
+javac.*.args
+
+# Android build artifacts
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+build/
+.gradle/
+local.properties

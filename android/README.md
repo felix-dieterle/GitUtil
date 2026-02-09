@@ -4,29 +4,25 @@ This directory contains the Android APK project for GitUtil Mobile.
 
 ## What is this APK?
 
-**NEW: Standalone Git Functionality!**
+**Standalone Git Functionality!**
 
-This is now a fully functional Android app that provides git repository management without any external dependencies. The app includes:
+This is a fully functional Android app that provides git repository management without any external dependencies. The app includes:
 
 - **Built-in Git Operations** - Uses JGit library for native git support
 - **Touch-Optimized UI** - Beautiful WebView-based interface for managing repositories
-- **No Termux Required** - Works standalone without needing Termux or Python
+- **No External Dependencies** - Works standalone without needing any external tools
 - **Offline Capable** - All operations work locally on your device
 - **Storage Access** - Direct access to git repositories on your device
 
-The app also provides optional helper links for advanced users who prefer using Termux:
-- Direct links to install Termux from F-Droid
-- Direct links to download GitUtil packages from GitHub releases  
-- Quick access to setup documentation
-
 ## Features
 
-### Standalone Mode (No Dependencies)
 - Browse git commit history with full details
 - Rollback branches to any previous commit
+- Clone repositories directly from URLs
 - Touch-friendly interface optimized for mobile
 - Works with any git repository on your device
-- Stores repository path for quick access
+- Repository browser for managing multiple repositories
+- Automatic workspace creation at `/sdcard/GitUtil/repos`
 - Confirmation dialogs for destructive operations
 
 ### Technical Architecture
@@ -153,24 +149,18 @@ Edit `app/src/main/res/values/strings.xml`:
 <string name="app_name">GitUtil Mobile</string>
 ```
 
-### Changing Links
-
-Edit `app/src/main/java/com/gitutil/mobile/MainActivity.java` and update the URLs in the methods:
-- `openFDroidTermux()` - Termux F-Droid link
-- `openGitHubReleases()` - GitHub releases link  
-- `openDocumentation()` - Documentation link
-
-These are optional helper links for users who want to use the Termux-based setup.
-
 ## Using the App
 
 1. **Install the APK** on your Android device (API 24+)
-2. **Launch GitUtil** and tap "Launch GitUtil" button
+2. **Launch GitUtil** and tap "🚀 Launch GitUtil" button
 3. **Grant storage permission** when prompted
-4. **Enter repository path** (e.g., `/sdcard/git/my-repo`)
+4. **Choose an option:**
+   - Clone a repository from a URL
+   - Browse existing repositories in the workspace
+   - Enter a custom repository path
 5. **Browse commits** and rollback as needed
 
-The app will remember your last repository location for quick access.
+The app automatically manages your repositories in `/sdcard/GitUtil/repos`.
 
 ## Testing
 
