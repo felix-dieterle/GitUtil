@@ -153,7 +153,7 @@ public class GitBridge {
             if (!repository.getObjectDatabase().exists()) {
                 stepOutput.append("STEP_STATUS:validate:failed\n");
                 Log.e(TAG, "ERROR: Repository validation failed");
-                return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nInvalid repository");
+                return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nInvalid repository");
             }
             
             Log.i(TAG, "Repository validated successfully");
@@ -166,7 +166,7 @@ public class GitBridge {
                     stepOutput.append("STEP_DETAIL:Commit ").append(commitHash).append(" not found\n");
                     Log.e(TAG, "ERROR: Commit verification failed");
                     Log.e(TAG, "Commit " + commitHash + " not found in this repository");
-                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nCommit not found: " + commitHash);
+                    return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nCommit not found: " + commitHash);
                 }
                 Log.i(TAG, "✓ Commit " + commitHash + " verified");
                 stepOutput.append("STEP_DETAIL:Commit verified: ").append(commitHash, 0, Math.min(commitHash.length(), 8)).append("\n");
@@ -181,7 +181,7 @@ public class GitBridge {
                     stepOutput.append("STEP_STATUS:backup:failed\n");
                     stepOutput.append("STEP_DETAIL:Could not determine current HEAD\n");
                     Log.e(TAG, "ERROR: Could not determine current HEAD");
-                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nCould not determine current HEAD");
+                    return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nCould not determine current HEAD");
                 }
                 
                 // SimpleDateFormat created locally for immediate use - thread-safe in this context
@@ -204,7 +204,7 @@ public class GitBridge {
                     stepOutput.append("STEP_DETAIL:Failed to create backup branch\n");
                     Log.e(TAG, "ERROR: Failed to create backup branch");
                     Log.e(TAG, "Backup branch error: " + (branchEx.getMessage() != null ? branchEx.getMessage() : "unknown"));
-                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nFailed to create backup branch");
+                    return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nFailed to create backup branch");
                 }
                 
                 // Step 3: Reset to target commit
@@ -234,7 +234,7 @@ public class GitBridge {
                     rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
                     
                     String errorMsg = resetEx.getMessage() != null ? resetEx.getMessage() : resetEx.getClass().getSimpleName();
-                    return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\n" + errorMsg);
+                    return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\n" + errorMsg);
                 }
                 
                 // Step 4: Push to remote
@@ -267,7 +267,7 @@ public class GitBridge {
                         rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
                         
                         String errorMsg = pushEx.getMessage() != null ? pushEx.getMessage() : pushEx.getClass().getSimpleName();
-                        return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nPush to remote failed - changes rolled back\n" + errorMsg);
+                        return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nPush to remote failed - changes rolled back\n" + errorMsg);
                     }
                 } else {
                     // No remote configured - skip push and succeed
@@ -289,7 +289,7 @@ public class GitBridge {
             Log.e(TAG, "========================================");
             
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\n" + errorMsg);
+            return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\n" + errorMsg);
         }
     }
 
@@ -583,10 +583,14 @@ public class GitBridge {
     }
 
     private String createErrorResponse(String error) {
+        return createErrorResponse("", error);
+    }
+
+    private String createErrorResponse(String output, String error) {
         try {
             JSONObject response = new JSONObject();
             response.put("success", false);
-            response.put("output", "");
+            response.put("output", output);
             response.put("errors", error);
             response.put("exit_code", 1);
             return response.toString();
