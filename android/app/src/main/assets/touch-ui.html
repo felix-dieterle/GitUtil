@@ -267,6 +267,10 @@ Enter your GitHub Personal Access Token to browse and clone your repositories.
 <div class="card">
 <h2 class="card__header">Timeline Browser</h2>
 <div id="pathDisplay" class="notice-bar notice-info"></div>
+<div class="input-zone">
+<label class="input-zone__label">🔍 Filter Commits</label>
+<input type="text" id="commitFilterBox" class="text-box" placeholder="Search by message, author, or hash...">
+</div>
 <div id="snapshotList" class="timeline-zone"></div>
 <!-- Progress Tracker -->
 <div id="progressTracker" class="progress-tracker screen-off">
@@ -396,6 +400,7 @@ locationMsg:document.getElementById('locationMsg'),
 // Timeline viewer
 timelineViewer:document.getElementById('timelineViewer'),
 pathDisplay:document.getElementById('pathDisplay'),
+commitFilterBox:document.getElementById('commitFilterBox'),
 snapshotList:document.getElementById('snapshotList'),
 rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
@@ -551,13 +556,32 @@ return repo;
 }).filter(r=>r.name&&r.url);
 };
 
-const renderSnapshots=(snaps)=>{
+const filterSnapshots=(snaps,filterText)=>{
+if(!filterText||filterText.trim()===''){
+return snaps;
+}
+const lowerFilter=filterText.toLowerCase().trim();
+return snaps.filter(s=>{
+// Search in commit message, author, or hash
+return s.title.toLowerCase().includes(lowerFilter)||
+s.who.toLowerCase().includes(lowerFilter)||
+s.hash.toLowerCase().includes(lowerFilter)||
+s.short.toLowerCase().includes(lowerFilter);
+});
+};
+
+const renderSnapshots=(snaps,filterText='')=>{
+const filteredSnaps=filterSnapshots(snaps,filterText);
 Nodes.snapshotList.innerHTML='';
-if(snaps.length===0){
+if(filteredSnaps.length===0){
+if(filterText&&filterText.trim()!==''){
+Nodes.snapshotList.innerHTML='<div class="void-box"><div class="void-box__icon">🔍</div><div>No commits match your filter</div></div>';
+}else{
 Nodes.snapshotList.innerHTML='<div class="void-box"><div class="void-box__icon">📭</div><div>No snapshots found</div></div>';
+}
 return;
 }
-snaps.forEach(s=>{
+filteredSnaps.forEach(s=>{
 const card=document.createElement('div');
 card.className='snapshot-card';
 card.dataset.hash=s.hash;
@@ -634,6 +658,7 @@ if(timelineRes.success){
 WidgetState.snapshots=parseSnapshots(timelineRes.output);
 console.log('[UI] Loaded', WidgetState.snapshots.length, 'commits from repository');
 Nodes.pathDisplay.textContent=`Repository: ${path.split('/').pop()}`;
+Nodes.commitFilterBox.value='';
 renderSnapshots(WidgetState.snapshots);
 switchView(Nodes.timelineViewer);
 hideMsg(Nodes.rollbackMsg);
@@ -1027,6 +1052,13 @@ Nodes.switchBtn.onclick=()=>{
 WidgetState.loc='';WidgetState.snapshots=[];WidgetState.picked=null;
 switchView(Nodes.repoSelector);
 refreshRepoList();
+};
+
+// Commit filter input
+Nodes.commitFilterBox.oninput=()=>{
+const filterText=Nodes.commitFilterBox.value;
+console.log('[UI] Filtering commits with text:', filterText);
+renderSnapshots(WidgetState.snapshots,filterText);
 };
 
 // View logs button
