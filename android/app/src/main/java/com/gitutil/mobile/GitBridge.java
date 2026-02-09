@@ -253,6 +253,7 @@ public class GitBridge {
                     try {
                         // Push with force since we're intentionally rewriting history
                         // The rollback operation is an explicit user action to remove commits
+                        // Using explicit PushCommand type for Java 8 compatibility
                         PushCommand pushCommand = git.push()
                             .setRemote("origin")
                             .setRefSpecs(new RefSpec(currentBranch + ":" + currentBranch))
