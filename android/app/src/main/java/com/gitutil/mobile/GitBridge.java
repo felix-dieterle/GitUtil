@@ -10,6 +10,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.RefSpec;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -121,9 +122,9 @@ public class GitBridge {
     /**
      * Apply rollback to a specific commit with step tracking and transactional behavior
      * 
-     * NOTE: This Android/JGit implementation performs local rollback only.
-     * The shell script version (revert_branch.sh) also pushes changes to remote.
-     * Push functionality can be added using JGit's PushCommand if needed.
+     * This implementation performs a hard reset to the specified commit and pushes the changes
+     * to the remote repository (if configured). All commits after the selected commit will be
+     * removed from both local and remote history.
      * 
      * @param path Repository path
      * @param commitHash Target commit hash
@@ -236,11 +237,44 @@ public class GitBridge {
                     return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\n" + errorMsg);
                 }
                 
-                // Step 4: Push (Not implemented in Android version - local only)
-                // This is documented as a known limitation
+                // Step 4: Push to remote
                 stepOutput.append("STEP_STATUS:push:in_progress\n");
-                stepOutput.append("STEP_DETAIL:Push skipped (Android local-only mode)\n");
-                stepOutput.append("STEP_STATUS:push:completed\n");
+                String currentBranch = repository.getBranch();
+                stepOutput.append("STEP_DETAIL:Pushing changes to remote branch: ").append(currentBranch).append("\n");
+                Log.i(TAG, "Current branch: " + currentBranch);
+                
+                // Check if remote exists
+                if (git.remoteList().call().stream().anyMatch(remote -> remote.getName().equals("origin"))) {
+                    try {
+                        // Push with force since we're intentionally rewriting history
+                        // The rollback operation is an explicit user action to remove commits
+                        git.push()
+                            .setRemote("origin")
+                            .setRefSpecs(new RefSpec(currentBranch + ":" + currentBranch))
+                            .setForce(true)
+                            .call();
+                        
+                        Log.i(TAG, "✓ Successfully pushed to remote");
+                        stepOutput.append("STEP_STATUS:push:completed\n");
+                        stepOutput.append("STEP_DETAIL:Successfully pushed to remote\n");
+                    } catch (Exception pushEx) {
+                        stepOutput.append("STEP_STATUS:push:failed\n");
+                        stepOutput.append("STEP_DETAIL:Push to remote failed\n");
+                        Log.e(TAG, "ERROR: Push to remote failed");
+                        Log.e(TAG, "Push error: " + (pushEx.getMessage() != null ? pushEx.getMessage() : "unknown"));
+                        
+                        // Rollback: Restore from backup branch
+                        rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
+                        
+                        String errorMsg = pushEx.getMessage() != null ? pushEx.getMessage() : pushEx.getClass().getSimpleName();
+                        return createErrorResponse(stepOutput.toString() + "ROLLBACK_FAILED\nPush to remote failed - changes rolled back\n" + errorMsg);
+                    }
+                } else {
+                    // No remote configured - skip push and succeed
+                    stepOutput.append("STEP_STATUS:push:completed\n");
+                    stepOutput.append("STEP_DETAIL:No remote configured - push skipped\n");
+                    Log.i(TAG, "No remote configured - push skipped");
+                }
                 
                 // Success - keep backup branch for user reference (not deleted on success)
                 Log.i(TAG, "Backup branch retained: " + backupBranchName);
