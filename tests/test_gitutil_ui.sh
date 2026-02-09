@@ -139,10 +139,11 @@ else
 fi
 
 # Test 9: Test all menu options are present
-OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n5\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Select repository" && \
    echo "$OUTPUT" | grep -q "View commit history" && \
    echo "$OUTPUT" | grep -q "Revert branch" && \
+   echo "$OUTPUT" | grep -q "Cleanup repository" && \
    echo "$OUTPUT" | grep -q "Exit"; then
     pass_test "All menu options are present"
 else
@@ -151,11 +152,12 @@ else
     echo "    Select repository: $(echo "$OUTPUT" | grep -c "Select repository" || echo 0)" >&2
     echo "    View commit history: $(echo "$OUTPUT" | grep -c "View commit history" || echo 0)" >&2
     echo "    Revert branch: $(echo "$OUTPUT" | grep -c "Revert branch" || echo 0)" >&2
+    echo "    Cleanup repository: $(echo "$OUTPUT" | grep -c "Cleanup repository" || echo 0)" >&2
     echo "    Exit: $(echo "$OUTPUT" | grep -c "Exit" || echo 0)" >&2
 fi
 
 # Test 10: Test graceful exit
-OUTPUT=$(printf "\n4\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
+OUTPUT=$(printf "\n5\n" | timeout 5 bash "$GITUTIL" "$TEST_REPO" 2>&1 | strip_colors || true)
 if echo "$OUTPUT" | grep -q "Thank you"; then
     pass_test "Graceful exit message displayed"
 else

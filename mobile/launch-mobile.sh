@@ -284,6 +284,38 @@ echo "/sdcard/GitUtil/repos"
 exit 0
 WRAPPER_END
 
+# Generate cleanup repository wrapper
+cat > "${WRAPPER_DIR}/cleanup-repository.sh" << 'WRAPPER_END'
+#!/bin/bash
+REPO_PATH="$1"
+
+if [[ -z "${REPO_PATH}" ]]; then
+    echo "ERROR: Repository path required"
+    exit 1
+fi
+
+# Check if directory exists
+if [[ ! -d "${REPO_PATH}" ]]; then
+    echo "ERROR: Directory does not exist: ${REPO_PATH}"
+    exit 1
+fi
+
+# Verify it's a git repository
+if [[ ! -d "${REPO_PATH}/.git" ]]; then
+    echo "ERROR: Not a git repository: ${REPO_PATH}"
+    exit 1
+fi
+
+# Delete the repository
+if rm -rf "${REPO_PATH}"; then
+    echo "CLEANUP_SUCCESS"
+    exit 0
+else
+    echo "CLEANUP_FAILED"
+    exit 1
+fi
+WRAPPER_END
+
 # Generate list GitHub repos wrapper
 cat > "${WRAPPER_DIR}/list-github-repos.sh" << 'WRAPPER_END'
 #!/bin/bash
