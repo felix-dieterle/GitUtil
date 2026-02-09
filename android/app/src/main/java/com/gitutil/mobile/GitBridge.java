@@ -11,6 +11,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -43,7 +44,9 @@ public class GitBridge {
                 case "pull-timeline":
                     return pullTimeline(args.getString(0));
                 case "apply-rollback":
-                    return applyRollback(args.getString(0), args.getString(1));
+                    // Optional third parameter: GitHub token for authentication
+                    String token = args.length() > 2 ? args.getString(2) : null;
+                    return applyRollback(args.getString(0), args.getString(1), token);
                 case "get-default-workspace":
                     return getDefaultWorkspace();
                 case "ensure-workspace":
@@ -128,9 +131,10 @@ public class GitBridge {
      * 
      * @param path Repository path
      * @param commitHash Target commit hash
+     * @param githubToken Optional GitHub personal access token for authentication (can be null)
      * @return JSON response with success or error and step tracking information
      */
-    private String applyRollback(String path, String commitHash) {
+    private String applyRollback(String path, String commitHash, String githubToken) {
         // Create SimpleDateFormat locally to ensure thread safety
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
         StringBuilder stepOutput = new StringBuilder();
@@ -248,11 +252,20 @@ public class GitBridge {
                     try {
                         // Push with force since we're intentionally rewriting history
                         // The rollback operation is an explicit user action to remove commits
-                        git.push()
+                        var pushCommand = git.push()
                             .setRemote("origin")
                             .setRefSpecs(new RefSpec(currentBranch + ":" + currentBranch))
-                            .setForce(true)
-                            .call();
+                            .setForce(true);
+                        
+                        // Add credentials if GitHub token is provided
+                        if (githubToken != null && !githubToken.trim().isEmpty()) {
+                            Log.i(TAG, "Using provided GitHub token for authentication");
+                            pushCommand.setCredentialsProvider(
+                                new UsernamePasswordCredentialsProvider(githubToken, "")
+                            );
+                        }
+                        
+                        pushCommand.call();
                         
                         Log.i(TAG, "✓ Successfully pushed to remote");
                         stepOutput.append("STEP_STATUS:push:completed\n");

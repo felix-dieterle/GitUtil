@@ -993,8 +993,11 @@ showGlobalLoading('Performing rollback...','Reverting to selected commit');
 setBusy(Nodes.rollbackBtn,true);
 try{
 console.log('[ROLLBACK] Calling wrapper: apply-rollback');
-console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked]);
-const res=await callWrapper('apply-rollback',[WidgetState.loc,WidgetState.picked]);
+// Get GitHub token from state (if available)
+const githubToken=WidgetState.githubToken||localStorage.getItem('gitutil_github_token')||'';
+const wrapperArgs=githubToken?[WidgetState.loc,WidgetState.picked,githubToken]:[WidgetState.loc,WidgetState.picked];
+console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked,githubToken?'(token provided)':'(no token)']);
+const res=await callWrapper('apply-rollback',wrapperArgs);
 console.log('[ROLLBACK] Wrapper execution completed');
 console.log('[ROLLBACK] Response object:', JSON.stringify(res,null,2));
 console.log('[ROLLBACK] Response success flag:', res.success);
