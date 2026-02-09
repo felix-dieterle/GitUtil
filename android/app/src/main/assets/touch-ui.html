@@ -270,6 +270,7 @@ Enter your GitHub Personal Access Token to browse and clone your repositories.
 </div>
 <div class="btn-row">
 <button id="viewLogsBtn" class="action-btn btn-secondary">📋 View Logs</button>
+<button id="cleanupBtn" class="action-btn btn-danger">🗑️ Cleanup Repo</button>
 </div>
 </div>
 <div id="rollbackMsg"></div>
@@ -369,6 +370,7 @@ rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg'),
 viewLogsBtn:document.getElementById('viewLogsBtn'),
+cleanupBtn:document.getElementById('cleanupBtn'),
 // Progress tracker
 progressTracker:document.getElementById('progressTracker'),
 progressDetails:document.getElementById('progressDetails'),
@@ -949,6 +951,40 @@ refreshRepoList();
 Nodes.viewLogsBtn.onclick=()=>{
 switchView(Nodes.logViewer,true);
 renderLogs();
+};
+
+// Cleanup repository button
+Nodes.cleanupBtn.onclick=async()=>{
+if(!WidgetState.loc){
+showMsg(Nodes.rollbackMsg,'No repository loaded','bad');
+return;
+}
+const repoName=WidgetState.loc.replace(/\/+$/,'').split('/').pop()||'repository';
+if(!confirm(`⚠️ WARNING: This will permanently delete the repository from your device.\n\nRepository: ${repoName}\nPath: ${WidgetState.loc}\n\nThis action cannot be undone. Continue?`)){
+return;
+}
+setBusy(Nodes.cleanupBtn,true);
+hideMsg(Nodes.rollbackMsg);
+try{
+const result=await callWrapper('cleanup-repository',[WidgetState.loc]);
+if(result.success){
+showMsg(Nodes.rollbackMsg,'✅ Repository deleted successfully','good');
+WidgetState.loc='';
+WidgetState.snapshots=[];
+WidgetState.picked=null;
+setTimeout(()=>{
+switchView(Nodes.repoSelector);
+refreshRepoList();
+},1500);
+}else{
+showMsg(Nodes.rollbackMsg,`❌ Cleanup failed: ${result.errors}`,'bad');
+}
+}catch(err){
+showMsg(Nodes.rollbackMsg,`❌ Error: ${err.message}`,'bad');
+console.error('[GitUtil] Cleanup error:',err);
+}finally{
+setBusy(Nodes.cleanupBtn,false);
+}
 };
 
 // Refresh logs button

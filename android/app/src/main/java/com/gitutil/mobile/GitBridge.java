@@ -53,6 +53,8 @@ public class GitBridge {
                     return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null);
                 case "list-github-repos":
                     return listGitHubRepositories(args.getString(0));
+                case "cleanup-repository":
+                    return cleanupRepository(args.getString(0));
                 default:
                     return createErrorResponse("Unknown wrapper: " + wrapperName);
             }
@@ -466,6 +468,70 @@ public class GitBridge {
             Log.e(TAG, "Error listing GitHub repositories", e);
             return createErrorResponse("Error connecting to GitHub: " + e.getMessage());
         }
+    }
+
+    /**
+     * Cleanup (delete) a repository from the workspace
+     */
+    private String cleanupRepository(String path) {
+        try {
+            File repoDir = new File(path);
+            
+            // Check if directory exists
+            if (!repoDir.exists()) {
+                return createErrorResponse("Directory does not exist: " + path);
+            }
+            
+            if (!repoDir.isDirectory()) {
+                return createErrorResponse("Path is not a directory: " + path);
+            }
+            
+            // Security: Resolve canonical path to prevent directory traversal
+            String canonicalPath = repoDir.getCanonicalPath();
+            File workspaceDir = new File(DEFAULT_WORKSPACE_PATH);
+            String workspaceCanonicalPath = workspaceDir.getCanonicalPath();
+            
+            // Verify the repository is within the workspace to prevent deleting arbitrary files
+            if (!canonicalPath.startsWith(workspaceCanonicalPath)) {
+                Log.w(TAG, "Attempted to delete repository outside workspace: " + canonicalPath);
+                return createErrorResponse("Security: Can only delete repositories within workspace");
+            }
+            
+            // Verify it's a git repository
+            File gitDir = new File(repoDir, ".git");
+            if (!gitDir.exists() || !gitDir.isDirectory()) {
+                return createErrorResponse("Not a git repository: " + path);
+            }
+            
+            Log.i(TAG, "Deleting repository: " + canonicalPath);
+            
+            // Delete the repository recursively
+            if (deleteRecursively(repoDir)) {
+                return createSuccessResponse("CLEANUP_SUCCESS:" + path);
+            } else {
+                return createErrorResponse("Failed to delete repository: " + path);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error cleaning up repository", e);
+            return createErrorResponse("Error deleting repository: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Recursively delete a directory and all its contents
+     */
+    private boolean deleteRecursively(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    if (!deleteRecursively(child)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return file.delete();
     }
 
     private String createSuccessResponse(String output) {
