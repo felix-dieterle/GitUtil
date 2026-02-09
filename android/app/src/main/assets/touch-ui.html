@@ -563,10 +563,10 @@ return snaps;
 const lowerFilter=filterText.toLowerCase().trim();
 return snaps.filter(s=>{
 // Search in commit message, author, or hash
-return s.title.toLowerCase().includes(lowerFilter)||
-s.who.toLowerCase().includes(lowerFilter)||
-s.hash.toLowerCase().includes(lowerFilter)||
-s.short.toLowerCase().includes(lowerFilter);
+return (s.title||'').toLowerCase().includes(lowerFilter)||
+(s.who||'').toLowerCase().includes(lowerFilter)||
+(s.hash||'').toLowerCase().includes(lowerFilter)||
+(s.short||'').toLowerCase().includes(lowerFilter);
 });
 };
 
