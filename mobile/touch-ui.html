@@ -956,8 +956,8 @@ showMsg(Nodes.rollbackMsg,'No repository selected','bad');
 return;
 }
 const repoPath=WidgetState.loc;
-const repoName=repoPath.split('/').filter(p=>p).pop();
-if(!confirm(`⚠️ Delete repository permanently?\n\nThis will remove:\n${repoPath}\n\nAll local changes and commits will be lost.\n\nType 'yes' to confirm.`)){
+const repoName=repoPath.split('/').filter(part=>part).pop();
+if(!confirm(`⚠️ Delete repository permanently?\n\nThis will remove:\n${repoPath}\n\nAll local changes and commits will be lost.\n\nClick OK to confirm deletion.`)){
 return;
 }
 setBusy(Nodes.cleanupBtn,true);
