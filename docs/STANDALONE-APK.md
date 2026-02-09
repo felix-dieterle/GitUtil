@@ -1,8 +1,8 @@
-# GitUtil Standalone Android Implementation
+# GitUtil Android Implementation
 
 ## Overview
 
-GitUtil Mobile now includes a **standalone Android application** that provides full git repository management without requiring any external dependencies like Termux, Python, or command-line git tools.
+GitUtil Mobile is a **standalone Android application** that provides full git repository management without requiring any external dependencies.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ WebView container that:
 
 ### 3. touch-ui.html (Modified)
 
-The original HTML interface with one key modification:
+The original HTML interface with automatic detection:
 
 ```javascript
 // Check if AndroidBridge is available (native Android)
@@ -76,15 +76,10 @@ if(typeof AndroidBridge !== 'undefined'){
     const result = AndroidBridge.executeWrapper(wrapperName, JSON.stringify(args));
     return JSON.parse(result);
 }
-// Otherwise fall back to HTTP (Termux mode)
-else {
-    const response = await fetch('http://localhost:8765/exec-wrapper', ...);
-}
+// No fallback needed - app always has AndroidBridge
 ```
 
-This allows the same interface to work in both:
-- **Standalone mode** - Using AndroidBridge with JGit
-- **Termux mode** - Using HTTP bridge with shell scripts
+This allows the interface to use AndroidBridge for native git operations.
 
 ## Implementation Details
 
@@ -153,9 +148,8 @@ These are requested at runtime when GitUtilActivity launches.
 
 ### No External Dependencies
 
-- **No Termux required** - Runs natively on Android
-- **No Python needed** - Pure Java implementation
-- **No shell scripts** - JGit handles all git operations
+- **Self-contained** - Runs natively on Android
+- **Pure Java** - JGit handles all git operations
 - **No HTTP server** - Direct JavaScript to Java communication
 
 ### Better Integration
@@ -179,17 +173,19 @@ All core operations from the shell script version:
 - ✅ Repository validation
 - ✅ Commit history browsing (100 commits)
 - ✅ Hard reset to commit
+- ✅ Repository cloning
+- ✅ Workspace management
 - ✅ Path persistence
 - ✅ Confirmation dialogs
 
-### Limitations
+### Technical Limitations
 
-Compared to the Termux version, the standalone APK:
-- Limited to JGit capabilities (no custom git commands)
-- No access to other shell tools
+The app is limited to JGit capabilities:
+- No custom git commands
+- No access to shell tools
 - Cannot run custom scripts
 
-For most users, the standalone version provides all needed functionality.
+For most users, the app provides all needed git functionality.
 
 ## Building
 
@@ -240,27 +236,12 @@ Potential improvements:
 
 All of these are possible with JGit without adding dependencies.
 
-## Comparison with Termux Version
-
-| Feature | Standalone APK | Termux Version |
-|---------|----------------|----------------|
-| Dependencies | None | Termux + Git + Python + Bash |
-| Installation | One APK | Multiple steps |
-| Size | ~10 MB | 100+ MB total |
-| Git Operations | JGit (Java) | Native git CLI |
-| Extensibility | Limited to JGit | Full shell access |
-| Performance | Fast (native) | Fast (native git) |
-| Security | Sandboxed | Termux sandbox |
-| Updates | Via APK | Via pkg update |
-
 ## Conclusion
 
-The standalone APK implementation successfully answers the question: **"Is there a chance to implement this app function as an APK without additional dependencies?"**
-
-**Yes!** By using JGit and WebView, we've created a fully functional git repository manager that:
+The APK implementation successfully provides a fully functional git repository manager that:
 - Requires no external dependencies
 - Works entirely within a single APK
-- Provides the same user experience as the Termux version
-- Maintains compatibility with the original interface
+- Provides a touch-optimized mobile interface
+- Offers seamless repository management
 
-This makes GitUtil Mobile accessible to a much wider audience who may not want to install and configure Termux.
+This makes GitUtil Mobile accessible to anyone with an Android device.
