@@ -2,20 +2,22 @@
 
 [![Test Suite](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml/badge.svg)](https://github.com/felix-dieterle/GitUtil/actions/workflows/test.yml)
 
-A cross-platform git repository manager with **mobile web interface for Android** and interactive terminal UI.
+A cross-platform git repository manager with **mobile app for Android** and interactive terminal UI.
 
 GitUtil provides shell-based tools for navigating commit history and reverting branches, with two user interfaces:
-- **Mobile Web UI** - Touch-optimized interface for Android devices (Termux)
+- **Mobile App** - Touch-optimized interface for Android devices with built-in git support
 - **Terminal UI** - Interactive command-line interface for desktop/server use
 
 ## Features
 
-### Mobile Web Interface (Android/Termux)
+### Mobile App (Android)
 - **Touch-optimized design** - Large buttons and responsive layout for mobile screens
-- **Self-contained HTML** - Works offline, no internet required
+- **Built-in git support** - Uses JGit, no external dependencies required
 - **Visual commit browser** - Scroll through commit history with full details
 - **One-tap rollback** - Select any snapshot and reset your branch
-- **Path memory** - Remembers your last repository location
+- **Clone repositories** - Clone directly from GitHub/GitLab URLs
+- **Repository browser** - Switch between multiple repositories effortlessly
+- **Automatic workspace** - Manages repositories in `/sdcard/GitUtil/repos`
 - **Safe operations** - Confirmation dialogs before destructive actions
 
 ### Terminal Interface (Desktop/Server)
@@ -35,10 +37,11 @@ GitUtil provides shell-based tools for navigating commit history and reverting b
 
 This project uses a lightweight shell-based architecture:
 - `gitutil.sh` - Interactive terminal UI (desktop/server interface)
-- `mobile/` - **Mobile web interface for Android**
+- `android/` - **Mobile Android app with built-in git support**
+  - `MainActivity.java` - App launcher
+  - `GitUtilActivity.java` - WebView container for the mobile UI
+  - `GitBridge.java` - JGit integration for git operations
   - `touch-ui.html` - Mobile-optimized HTML interface
-  - `launch-mobile.sh` - Launcher script for Termux
-  - `wrappers/` - Shell script wrappers (auto-generated)
 - `scripts/` - Core git operation shell scripts
   - `validate_repo.sh` - Validates git repositories
   - `fetch_commits.sh` - Extracts commit history
@@ -50,64 +53,28 @@ This project uses a lightweight shell-based architecture:
 
 ## Installation & Usage
 
-### Mobile Interface (Android/Termux)
-
-**Option 1: Standalone APK (Recommended - No Dependencies Required)**
+### Mobile App (Android)
 
 1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
-2. Open the app and grant storage permission when prompted
-3. **NEW: Automatic Workspace Setup!**
-   - The app automatically creates a default workspace at `/sdcard/GitUtil/repos`
+2. Open the app and tap **"🚀 Launch GitUtil"**
+3. Grant storage permission when prompted
+4. **Automatic Workspace Setup:**
+   - The app automatically creates a workspace at `/sdcard/GitUtil/repos`
    - Clone repositories directly from GitHub/GitLab URLs
    - Or browse to existing repositories on your device
-4. Select a repository from the list or clone a new one
-5. Browse commits and rollback as needed
+5. Select a repository from the list or clone a new one
+6. Browse commits and rollback as needed
 
-**The APK now includes built-in git support using JGit - no Termux, Python, or external dependencies required!**
+**The APK includes built-in git support using JGit - no external dependencies required!**
 
-**New User-Friendly Features:**
-- 🎯 **No manual path entry required** - app manages workspace automatically
+**Features:**
+- 🎯 **No manual setup required** - app manages workspace automatically
 - 📦 **Clone repositories with one tap** - just paste the URL
 - 📂 **Repository browser** - easily switch between multiple repositories
 - 💾 **Automatic workspace creation** - everything stored in `/sdcard/GitUtil/repos`
 - 🔄 **Remember last used repo** - quick access to your recent work
 
-**Option 2: Easy Install (Classic - Via Termux)**
-
-1. Download and install the GitUtil Mobile APK from [GitHub Releases](https://github.com/felix-dieterle/GitUtil/releases)
-2. Open the app and follow the on-screen installation guide
-3. The app will help you:
-   - Install Termux from F-Droid
-   - Download the GitUtil package
-   - Access setup documentation
-
-**Option 3: Manual Installation (Termux)**
-
-**Prerequisites:**
-1. Install [Termux](https://f-droid.org/en/packages/com.termux/) from F-Droid
-2. Install required packages:
-   ```bash
-   pkg install git bash python
-   ```
-
-**Quick Start:**
-```bash
-# Download and extract GitUtil
-unzip gitutil-mobile-*.zip
-cd gitutil-mobile-*
-
-# Launch the mobile interface
-bash mobile/launch-mobile.sh
-```
-
-The launcher will:
-- Generate wrapper scripts automatically
-- Start the bridge server on localhost:8765
-- Open the interface in your browser
-
-**Using the Mobile Interface:**
-
-**For Standalone APK Users (New Improved Flow):**
+**Using the Mobile App:**
 1. On first launch, the app automatically creates workspace at `/sdcard/GitUtil/repos`
 2. Choose one of three options:
    - **Clone Repository**: Enter a Git URL (e.g., `https://github.com/user/repo.git`) and tap Clone
@@ -118,25 +85,12 @@ The launcher will:
 5. Tap "Apply Rollback" to reset your branch to that snapshot
 6. Confirm the operation when prompted
 
-**For Termux Users:**
-1. The interface now shows your workspace repositories automatically
-2. Clone new repositories directly from the UI with a URL
-3. Or use "Custom Path" for repositories outside the workspace
-4. Browse commits and perform rollbacks just like the APK version
-
-**Important Notes:**
-- Keep the terminal open - the bridge server must run while using the interface
-- Press Ctrl+C to stop the server when done
-- The interface connects to http://localhost:8765
-
 **Tips:**
 - The app automatically creates and manages `/sdcard/GitUtil/repos` workspace
 - Clone repositories with just a URL - no manual path configuration needed
 - The interface remembers your last used repository for quick access
 - Switch between multiple repositories effortlessly with the repository browser
-- For Termux: Bookmark http://localhost:8765 for quick access
 - Works with any git repository on your device
-- The bridge server provides secure localhost-only access
 
 ### Terminal Interface (Desktop/Server)
 
@@ -214,8 +168,7 @@ git checkout -b recovery backup/before-rollback-20260208_193814
 
 The backup is created automatically in all interfaces:
 - Terminal UI (`gitutil.sh`)
-- Mobile Web UI (Termux)
-- Android APK (standalone app)
+- Mobile Android App
 
 #### Auto-Clone Functionality
 
@@ -285,26 +238,11 @@ The CI workflow runs all 30 tests and reports results. Check the [Actions tab](h
 
 ## Requirements
 
-### For Mobile Interface (Android)
-
-**For Standalone APK (No Dependencies):**
+### For Mobile App (Android)
 - Android 7.0 (API 24) or higher
 - Storage permission (granted when you first launch the app)
 - About 10 MB of storage space
-- That's it! No Termux, Python, or Git installation required
-
-**For APK Users (Classic Termux Setup):**
-- Android 7.0 (API 24) or higher
-- Enable installation from unknown sources:
-  - **Android 8.0+**: Settings → Apps → Special app access → Install unknown apps → [Your Browser] → Allow
-  - **Android 7.x**: Settings → Security → Unknown Sources
-- The APK will guide you through the rest of the setup
-
-**For Manual Installation:**
-- Android device with Termux installed
-- Git, Bash, and Python 3 packages (`pkg install git bash python`)
-- Web browser (any Android browser)
-- Storage access for git repositories
+- That's it! No external dependencies required
 
 ### For Terminal Interface (Desktop/Server)
 - Bash shell (version 4.0 or higher)
