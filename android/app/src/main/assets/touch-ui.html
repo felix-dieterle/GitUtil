@@ -618,7 +618,6 @@ Nodes.githubRepoList.appendChild(card);
 
 const loadRepository=async(path)=>{
 console.log('[UI] Loading repository:', path);
-showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repository...','info');
 showGlobalLoading('Loading repository...','Fetching commit history');
 try{
 const checkRes=await callWrapper('check-location',[path]);
@@ -653,7 +652,6 @@ hideGlobalLoading();
 };
 
 const refreshRepoList=async()=>{
-showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Loading repositories...','info');
 showGlobalLoading('Loading repositories...','Scanning workspace');
 try{
 const listRes=await callWrapper('list-repositories',[WidgetState.workspace]);
@@ -670,7 +668,6 @@ hideGlobalLoading();
 };
 
 const initWorkspace=async()=>{
-showMsg(Nodes.repoMsg,'<span class="spin-wheel"></span> Initializing workspace...','info');
 showGlobalLoading('Initializing workspace...','Setting up GitUtil');
 try{
 const wsRes=await callWrapper('ensure-workspace',[]);
@@ -742,7 +739,6 @@ switchView(Nodes.repoSelector);
 // Clone GitHub repository
 const cloneGitHubRepo=async(url,name)=>{
 hideMsg(Nodes.githubBrowserMsg);
-showMsg(Nodes.githubBrowserMsg,`<span class="spin-wheel"></span> Cloning ${name}...`,'info');
 showGlobalLoading(`Cloning ${name}...`,'This may take a few minutes');
 try{
 const cloneRes=await callWrapper('clone-repository',[url,name]);
@@ -952,7 +948,6 @@ console.log('[ROLLBACK] ========================================');
 Nodes.progressTracker.classList.remove('screen-off');
 resetProgressTracker();
 
-showMsg(Nodes.rollbackMsg,'⏳ Initiating rollback operation...','info');
 setBusy(Nodes.rollbackBtn,true);
 showGlobalLoading('Performing rollback...','Reverting to selected commit');
 try{
