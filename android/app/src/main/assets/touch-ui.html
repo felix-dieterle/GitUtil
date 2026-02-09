@@ -954,6 +954,17 @@ addProgressDetail(message);
 });
 };
 
+// Filter out step tracking messages from text to show only actual errors
+const filterStepMessages=(text)=>{
+if(!text)return'';
+const lines=text.split('\n');
+const filtered=lines.filter(line=>
+!line.startsWith('STEP_STATUS:')&&
+!line.startsWith('STEP_DETAIL:')
+);
+return filtered.join('\n').trim();
+};
+
 // Rollback button
 Nodes.rollbackBtn.onclick=async()=>{
 console.log('[ROLLBACK] Apply Rollback button clicked');
@@ -982,8 +993,11 @@ showGlobalLoading('Performing rollback...','Reverting to selected commit');
 setBusy(Nodes.rollbackBtn,true);
 try{
 console.log('[ROLLBACK] Calling wrapper: apply-rollback');
-console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked]);
-const res=await callWrapper('apply-rollback',[WidgetState.loc,WidgetState.picked]);
+// Get GitHub token from state (if available)
+const githubToken=WidgetState.githubToken||localStorage.getItem('gitutil_github_token')||'';
+const wrapperArgs=githubToken?[WidgetState.loc,WidgetState.picked,githubToken]:[WidgetState.loc,WidgetState.picked];
+console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked,githubToken?'(token provided)':'(no token)']);
+const res=await callWrapper('apply-rollback',wrapperArgs);
 console.log('[ROLLBACK] Wrapper execution completed');
 console.log('[ROLLBACK] Response object:', JSON.stringify(res,null,2));
 console.log('[ROLLBACK] Response success flag:', res.success);
@@ -1017,16 +1031,22 @@ console.warn('[ROLLBACK] Timeline refresh failed:', refresh);
 },2000);
 }else{
 console.error('[ROLLBACK] ❌ Rollback operation failed');
-// Build detailed error message
+// Build detailed error message - filter out step tracking messages
 let errorDetails='';
 if(res.errors){
-errorDetails+=res.errors;
-console.error('[ROLLBACK] Error details from stderr:', res.errors);
+const filteredErrors=filterStepMessages(res.errors);
+if(filteredErrors){
+errorDetails+=filteredErrors;
+console.error('[ROLLBACK] Error details from stderr:', filteredErrors);
+}
 }
 if(res.output&&!res.output.includes('ROLLBACK_SUCCESS:')){
+const filteredOutput=filterStepMessages(res.output);
+if(filteredOutput){
 if(errorDetails)errorDetails+='\n';
-errorDetails+=res.output;
-console.error('[ROLLBACK] Output from stdout:', res.output);
+errorDetails+=filteredOutput;
+console.error('[ROLLBACK] Output from stdout:', filteredOutput);
+}
 }
 if(!errorDetails){
 errorDetails='Unknown error occurred. Check logs for details.';
