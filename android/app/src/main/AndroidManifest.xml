@@ -30,6 +30,7 @@
         <activity
             android:name=".GitUtilActivity"
             android:exported="false"
+            android:hardwareAccelerated="true"
             android:label="GitUtil"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
     </application>
