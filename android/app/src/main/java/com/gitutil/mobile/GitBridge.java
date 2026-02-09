@@ -260,8 +260,9 @@ public class GitBridge {
                         // Add credentials if GitHub token is provided
                         if (githubToken != null && !githubToken.trim().isEmpty()) {
                             Log.i(TAG, "Using provided GitHub token for authentication");
+                            // GitHub personal access tokens should be used as password with a dummy username
                             pushCommand.setCredentialsProvider(
-                                new UsernamePasswordCredentialsProvider(githubToken, "")
+                                new UsernamePasswordCredentialsProvider("x-access-token", githubToken)
                             );
                         }
                         
