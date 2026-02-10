@@ -746,9 +746,13 @@ renderGitHubRepos(WidgetState.githubRepos);
 switchView(Nodes.githubBrowserView);
 hideMsg(Nodes.githubBrowserMsg);
 }else{
-showMsg(Nodes.githubAuthMsg,listRes.output||'Failed to connect to GitHub','bad');
+const errorMsg=listRes.output||'Failed to connect to GitHub';
+console.error('[GitUtil] GitHub connection failed:', errorMsg);
+console.error('[GitUtil] GitHub API response:', listRes);
+showMsg(Nodes.githubAuthMsg,`Failed to connect to GitHub. ${errorMsg}`,'bad');
 }
 }catch(e){
+console.error('[GitUtil] GitHub auth error:', e);
 showMsg(Nodes.githubAuthMsg,`Error: ${e.message}`,'bad');
 }finally{
 setBusy(Nodes.githubAuthBtn,false);
