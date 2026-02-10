@@ -279,12 +279,13 @@ public class GitBridge {
                         
                         // Check if this is an authentication error by examining exception type and message
                         // JGit throws TransportException for authentication failures
+                        // Use case-insensitive matching for error messages to handle variations
+                        String errorMsgLower = errorMsg.toLowerCase();
                         boolean isAuthError = (pushEx instanceof TransportException) &&
-                                            (errorMsg.contains("Authentication") || 
-                                             errorMsg.contains("CredentialsProvider") ||
-                                             errorMsg.contains("not authorized") ||
-                                             errorMsg.contains("authentication failed") ||
-                                             errorMsg.contains("Authentication is required"));
+                                            (errorMsgLower.contains("authentication") || 
+                                             errorMsgLower.contains("credentialsprovider") ||
+                                             errorMsgLower.contains("not authorized") ||
+                                             errorMsgLower.contains("unauthorized"));
                         
                         if (isAuthError) {
                             // Authentication failed - keep local changes but warn user
