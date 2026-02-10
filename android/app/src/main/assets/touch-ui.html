@@ -749,7 +749,7 @@ hideMsg(Nodes.githubBrowserMsg);
 const errorMsg=listRes.output||'Failed to connect to GitHub';
 console.error('[GitUtil] GitHub connection failed:', errorMsg);
 console.error('[GitUtil] GitHub API response:', listRes);
-showMsg(Nodes.githubAuthMsg,`Failed to connect to GitHub. ${errorMsg}`,'bad');
+showMsg(Nodes.githubAuthMsg,errorMsg,'bad');
 }
 }catch(e){
 console.error('[GitUtil] GitHub auth error:', e);
