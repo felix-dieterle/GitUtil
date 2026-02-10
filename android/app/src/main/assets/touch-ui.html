@@ -499,19 +499,23 @@ console.log(`[LOADING] Global loading still active (count: ${loadingOverlayCount
 }
 };
 
+// Helper function to log wrapper results with condensed output for pull-timeline
+const logWrapperResult=(wrapperName,result)=>{
+if(wrapperName === 'pull-timeline' && result.success){
+const snapshotCount = (result.output.match(/SNAPSHOT_BEGIN/g) || []).length;
+console.log(`[GitUtil] Wrapper ${wrapperName} result: {"success":true,"output":"${snapshotCount} commits fetched","errors":"","exit_code":0}`);
+}else{
+console.log(`[GitUtil] Wrapper ${wrapperName} result:`, result);
+}
+};
+
 const callWrapper=async(wrapperName,args=[])=>{
 console.log(`[GitUtil] Calling wrapper: ${wrapperName}`, args);
 try{
 if(typeof AndroidBridge !== 'undefined'){
 const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
 const parsed=JSON.parse(result);
-// Log concise summary for pull-timeline to keep logs readable
-if(wrapperName === 'pull-timeline' && parsed.success){
-const snapshotCount = (parsed.output.match(/SNAPSHOT_BEGIN/g) || []).length;
-console.log(`[GitUtil] Wrapper ${wrapperName} result: {"success":true,"output":"${snapshotCount} commits fetched","errors":"","exit_code":0}`);
-}else{
-console.log(`[GitUtil] Wrapper ${wrapperName} result:`, parsed);
-}
+logWrapperResult(wrapperName, parsed);
 return parsed;
 }else{
 const response=await fetch('http://localhost:8765/exec-wrapper',{
@@ -525,13 +529,7 @@ console.error(`[GitUtil] ${error}`);
 throw new Error(error);
 }
 const result=await response.json();
-// Log concise summary for pull-timeline to keep logs readable
-if(wrapperName === 'pull-timeline' && result.success){
-const snapshotCount = (result.output.match(/SNAPSHOT_BEGIN/g) || []).length;
-console.log(`[GitUtil] Wrapper ${wrapperName} result: {"success":true,"output":"${snapshotCount} commits fetched","errors":"","exit_code":0}`);
-}else{
-console.log(`[GitUtil] Wrapper ${wrapperName} result:`, result);
-}
+logWrapperResult(wrapperName, result);
 return result;
 }
 }catch(err){
