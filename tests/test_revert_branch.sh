@@ -266,6 +266,46 @@ else
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 
+# Test 9: Verify backup branch is pushed to remote
+echo ""
+echo "Test Group: Backup Branch Push to Remote"
+# Check if backup branch exists on remote
+cd "$TEST_DIR/remote_repo.git"
+REMOTE_BACKUP_BRANCHES=$(git branch --list "backup/before-rollback-*" | wc -l)
+cd - > /dev/null
+
+TESTS_RUN=$((TESTS_RUN + 1))
+if [ "$REMOTE_BACKUP_BRANCHES" -ge 1 ]; then
+    echo -e "${GREEN}✓${NC} PASS: Backup branch was pushed to remote repository"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "${RED}✗${NC} FAIL: Backup branch was not found on remote repository"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+# Verify the remote backup branch points to the correct commit (pre-rollback HEAD)
+cd "$TEST_DIR/remote_repo.git"
+REMOTE_BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | sort | tail -1 | tr -d ' ')
+if [ -n "$REMOTE_BACKUP_BRANCH_NAME" ]; then
+    REMOTE_BACKUP_COMMIT=$(git rev-parse "$REMOTE_BACKUP_BRANCH_NAME" 2>/dev/null)
+    cd - > /dev/null
+    
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [ "$REMOTE_BACKUP_COMMIT" = "$REMOTE_THIRD" ]; then
+        echo -e "${GREEN}✓${NC} PASS: Remote backup branch points to correct commit (pre-rollback HEAD)"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}✗${NC} FAIL: Remote backup branch points to wrong commit (expected $REMOTE_THIRD, got $REMOTE_BACKUP_COMMIT)"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+else
+    cd - > /dev/null
+    TESTS_RUN=$((TESTS_RUN + 1))
+    echo -e "${RED}✗${NC} FAIL: Could not find backup branch on remote to verify commit"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+
 teardown
 
 # Print summary and exit
