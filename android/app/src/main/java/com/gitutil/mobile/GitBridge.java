@@ -276,18 +276,22 @@ public class GitBridge {
                     } catch (Exception pushEx) {
                         String errorMsg = pushEx.getMessage() != null ? pushEx.getMessage() : pushEx.getClass().getSimpleName();
                         
-                        // Check if this is an authentication error
-                        boolean isAuthError = errorMsg.contains("Authentication") || 
-                                            errorMsg.contains("CredentialsProvider") ||
-                                            errorMsg.contains("not authorized") ||
-                                            errorMsg.contains("authentication failed");
+                        // Check if this is an authentication error by examining exception type and message
+                        // JGit throws TransportException for authentication failures
+                        boolean isAuthError = (pushEx.getClass().getName().contains("TransportException") ||
+                                             pushEx.getClass().getName().contains("InvalidRemoteException")) &&
+                                            (errorMsg.contains("Authentication") || 
+                                             errorMsg.contains("CredentialsProvider") ||
+                                             errorMsg.contains("not authorized") ||
+                                             errorMsg.contains("authentication failed") ||
+                                             errorMsg.contains("Authentication is required"));
                         
                         if (isAuthError) {
                             // Authentication failed - keep local changes but warn user
                             stepOutput.append("STEP_STATUS:push:failed\n");
                             stepOutput.append("STEP_DETAIL:Push failed due to authentication\n");
                             stepOutput.append("STEP_DETAIL:Local rollback succeeded - remote was not updated\n");
-                            stepOutput.append("STEP_DETAIL:To push manually, use: git push --force-with-lease\n");
+                            stepOutput.append("STEP_DETAIL:To push manually, use: git push --force-with-lease origin ").append(currentBranch).append("\n");
                             Log.w(TAG, "⚠ Push failed due to authentication - local rollback succeeded");
                             Log.w(TAG, "Authentication error: " + errorMsg);
                             Log.i(TAG, "Local rollback completed successfully");
