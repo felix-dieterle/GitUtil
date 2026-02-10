@@ -339,27 +339,40 @@ error:console.error,
 warn:console.warn,
 info:console.info
 };
+// Helper function to format arguments for logging
+const formatLogArgs=(args)=>{
+return args.map(arg=>{
+if(typeof arg==='object'&&arg!==null){
+try{
+return JSON.stringify(arg,null,2);
+}catch(e){
+return String(arg);
+}
+}
+return String(arg);
+}).join(' ');
+};
 // Override console methods to capture logs
 console.log=function(...args){
-const msg='[LOG] '+args.join(' ');
+const msg='[LOG] '+formatLogArgs(args);
 AppLogs.push({time:new Date().toISOString(),msg:msg,type:'log'});
 if(AppLogs.length>maxLogEntries)AppLogs.shift();
 originalConsole.log.apply(console,args);
 };
 console.error=function(...args){
-const msg='[ERROR] '+args.join(' ');
+const msg='[ERROR] '+formatLogArgs(args);
 AppLogs.push({time:new Date().toISOString(),msg:msg,type:'error'});
 if(AppLogs.length>maxLogEntries)AppLogs.shift();
 originalConsole.error.apply(console,args);
 };
 console.warn=function(...args){
-const msg='[WARN] '+args.join(' ');
+const msg='[WARN] '+formatLogArgs(args);
 AppLogs.push({time:new Date().toISOString(),msg:msg,type:'warn'});
 if(AppLogs.length>maxLogEntries)AppLogs.shift();
 originalConsole.warn.apply(console,args);
 };
 console.info=function(...args){
-const msg='[INFO] '+args.join(' ');
+const msg='[INFO] '+formatLogArgs(args);
 AppLogs.push({time:new Date().toISOString(),msg:msg,type:'info'});
 if(AppLogs.length>maxLogEntries)AppLogs.shift();
 originalConsole.info.apply(console,args);
