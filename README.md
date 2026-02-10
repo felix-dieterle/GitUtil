@@ -140,12 +140,15 @@ This backup branch points to the state of your repository **before** the rollbac
 - Review what was lost during the rollback
 - Switch back to the previous state with a simple `git checkout`
 
+**Automatic Sync to Remote:** The backup branch is automatically pushed to your remote repository (if configured), so you can access it from any device or share it with your team. If the push fails (e.g., no remote configured or network issues), the backup branch is kept locally only.
+
 #### Automatic Push to Remote
 
 **NEW:** GitUtil now automatically pushes rollback changes to the remote repository!
 
 After successfully reverting to an earlier commit locally, GitUtil will:
-- Automatically push the changes to the remote repository using `git push --force-with-lease`
+- **Push the backup branch to remote** - The backup branch is synced so you can access it online
+- Automatically push the rollback changes to the remote repository using `git push --force-with-lease`
 - Ensure the rollback is applied to the main branch on the remote
 - Use `--force-with-lease` for safety (prevents overwriting changes you don't know about)
 
@@ -159,6 +162,7 @@ If the push fails (e.g., no remote configured or network issues):
 # Before rollback: You're on commit 5
 # GitUtil creates: backup/before-rollback-20260208_193814 (points to commit 5)
 # After rollback: You're on commit 2 (both locally AND on remote)
+# Backup branch is also on remote, so you can see it online
 
 # To recover to the pre-rollback state:
 git checkout backup/before-rollback-20260208_193814
