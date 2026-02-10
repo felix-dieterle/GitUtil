@@ -623,7 +623,9 @@ const promptForGitHubToken = async () => {
                     resolve({ valid: true, token: token, aborted: false });
                 } else {
                     const errorMsg = validationResult.output || validationResult.errors || 'Token validation failed';
-                    showMsg(Nodes.githubAuthMsg, errorMsg.replace('TOKEN_INVALID\\n', ''), 'bad');
+                    // Remove error prefixes from message
+                    const cleanMsg = errorMsg.replace(/^(TOKEN_INVALID|TOKEN_MISSING|TOKEN_VALIDATION_FAILED|TOKEN_VALIDATION_ERROR)\n/, '');
+                    showMsg(Nodes.githubAuthMsg, cleanMsg, 'bad');
                     setBusy(Nodes.githubAuthBtn, false);
                     hideGlobalLoading();
                 }
@@ -878,7 +880,9 @@ const validationRes = await callWrapper('validate-github-token', [token]);
 if (!validationRes.success || !validationRes.output.includes('TOKEN_VALID')) {
 const errorMsg = validationRes.errors || validationRes.output || 'Token validation failed';
 console.error('[GitUtil] Token validation failed:', errorMsg);
-showMsg(Nodes.githubAuthMsg, errorMsg.replace('TOKEN_INVALID\n', '').replace('TOKEN_MISSING\n', ''), 'bad');
+// Remove error prefixes from message
+const cleanMsg = errorMsg.replace(/^(TOKEN_INVALID|TOKEN_MISSING|TOKEN_VALIDATION_FAILED|TOKEN_VALIDATION_ERROR)\n/, '');
+showMsg(Nodes.githubAuthMsg, cleanMsg, 'bad');
 setBusy(Nodes.githubAuthBtn, false);
 hideGlobalLoading();
 return;
