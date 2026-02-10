@@ -65,6 +65,20 @@ if [ -n "$CURRENT_HEAD" ]; then
     git branch "$BACKUP_BRANCH" "$CURRENT_HEAD" 2>/dev/null
     if [ $? -eq 0 ]; then
         report_step_detail "Backup branch created successfully"
+        
+        # Push backup branch to remote if remote exists
+        if git remote | grep -q "^origin$"; then
+            report_step_detail "Pushing backup branch to remote"
+            git push origin "$BACKUP_BRANCH" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                report_step_detail "Backup branch pushed to remote successfully"
+            else
+                report_step_detail "Warning: Failed to push backup branch to remote (will be kept locally only)"
+            fi
+        else
+            report_step_detail "No remote configured - backup branch kept locally only"
+        fi
+        
         report_step "backup" "completed"
     else
         report_step "backup" "failed"

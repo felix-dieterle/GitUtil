@@ -177,6 +177,9 @@ public class GitBridge {
                 stepOutput.append("STEP_DETAIL:Commit verified: ").append(commitHash, 0, Math.min(commitHash.length(), 8)).append("\n");
                 stepOutput.append("STEP_STATUS:validate:completed\n");
                 
+                // Check if remote exists (cache result for later use)
+                boolean hasOrigin = git.remoteList().call().stream().anyMatch(remote -> remote.getName().equals("origin"));
+                
                 // Step 2: Create backup branch
                 stepOutput.append("STEP_STATUS:backup:in_progress\n");
                 currentHead = repository.resolve("HEAD");
@@ -203,6 +206,37 @@ public class GitBridge {
                         .call();
                     Log.i(TAG, "✓ Backup branch created successfully: " + backupBranchName);
                     stepOutput.append("STEP_DETAIL:Backup branch created successfully\n");
+                    
+                    // Push backup branch to remote if remote exists
+                    if (hasOrigin) {
+                        try {
+                            stepOutput.append("STEP_DETAIL:Pushing backup branch to remote\n");
+                            Log.i(TAG, "Pushing backup branch to remote: " + backupBranchName);
+                            
+                            PushCommand backupPushCommand = git.push()
+                                .setRemote("origin")
+                                .setRefSpecs(new RefSpec(backupBranchName + ":" + backupBranchName));
+                            
+                            // Add credentials if GitHub token is provided
+                            if (githubToken != null && !githubToken.trim().isEmpty()) {
+                                backupPushCommand.setCredentialsProvider(
+                                    new UsernamePasswordCredentialsProvider("x-access-token", githubToken)
+                                );
+                            }
+                            
+                            backupPushCommand.call();
+                            Log.i(TAG, "✓ Backup branch pushed to remote successfully");
+                            stepOutput.append("STEP_DETAIL:Backup branch pushed to remote successfully\n");
+                        } catch (Exception pushEx) {
+                            // Don't fail the entire operation if backup push fails
+                            Log.w(TAG, "Warning: Failed to push backup branch to remote: " + pushEx.getMessage());
+                            stepOutput.append("STEP_DETAIL:Warning: Failed to push backup branch to remote (will be kept locally only)\n");
+                        }
+                    } else {
+                        stepOutput.append("STEP_DETAIL:No remote configured - backup branch kept locally only\n");
+                        Log.i(TAG, "No remote configured - backup branch kept locally only");
+                    }
+                    
                     stepOutput.append("STEP_STATUS:backup:completed\n");
                 } catch (Exception branchEx) {
                     stepOutput.append("STEP_STATUS:backup:failed\n");
@@ -248,8 +282,8 @@ public class GitBridge {
                 stepOutput.append("STEP_DETAIL:Pushing changes to remote branch: ").append(currentBranch).append("\n");
                 Log.i(TAG, "Current branch: " + currentBranch);
                 
-                // Check if remote exists
-                if (git.remoteList().call().stream().anyMatch(remote -> remote.getName().equals("origin"))) {
+                // Check if remote exists (use cached result)
+                if (hasOrigin) {
                     try {
                         // Push with force since we're intentionally rewriting history
                         // The rollback operation is an explicit user action to remove commits
