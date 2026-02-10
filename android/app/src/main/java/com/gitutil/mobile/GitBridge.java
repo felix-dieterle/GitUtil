@@ -55,9 +55,13 @@ public class GitBridge {
                 case "list-repositories":
                     return listRepositories(args.length() > 0 ? args.getString(0) : DEFAULT_WORKSPACE_PATH);
                 case "clone-repository":
-                    return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null);
+                    // Optional third parameter: GitHub token for authentication (for private repos)
+                    String cloneToken = args.length() > 2 ? args.getString(2) : null;
+                    return cloneRepository(args.getString(0), args.length() > 1 ? args.getString(1) : null, cloneToken);
                 case "list-github-repos":
                     return listGitHubRepositories(args.getString(0));
+                case "validate-github-token":
+                    return validateGitHubToken(args.getString(0));
                 case "cleanup-repository":
                     return cleanupRepository(args.getString(0));
                 default:
@@ -444,8 +448,11 @@ public class GitBridge {
 
     /**
      * Clone a git repository from URL to workspace
+     * @param url The repository URL
+     * @param targetName Optional target directory name
+     * @param githubToken Optional GitHub token for private repositories
      */
-    private String cloneRepository(String url, String targetName) {
+    private String cloneRepository(String url, String targetName, String githubToken) {
         try {
             // Extract repository name from URL if target name not provided
             if (targetName == null || targetName.trim().isEmpty()) {
@@ -464,10 +471,20 @@ public class GitBridge {
 
             Log.i(TAG, "Cloning repository from " + url + " to " + targetDir.getAbsolutePath());
             
-            Git.cloneRepository()
+            // Build clone command
+            org.eclipse.jgit.api.CloneCommand cloneCommand = Git.cloneRepository()
                 .setURI(url)
-                .setDirectory(targetDir)
-                .call();
+                .setDirectory(targetDir);
+            
+            // Add credentials if GitHub token is provided
+            if (githubToken != null && !githubToken.trim().isEmpty()) {
+                Log.i(TAG, "Using provided GitHub token for authentication");
+                cloneCommand.setCredentialsProvider(
+                    new UsernamePasswordCredentialsProvider("x-access-token", githubToken)
+                );
+            }
+            
+            cloneCommand.call();
 
             return createSuccessResponse("CLONE_SUCCESS:" + targetDir.getAbsolutePath());
         } catch (Exception e) {
@@ -551,6 +568,57 @@ public class GitBridge {
         } catch (Exception e) {
             Log.e(TAG, "Error listing GitHub repositories", e);
             return createErrorResponse("Error connecting to GitHub: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Validate a GitHub personal access token
+     * @param token The GitHub token to validate
+     * @return Success response if token is valid, error response otherwise
+     */
+    private String validateGitHubToken(String token) {
+        try {
+            // Check if token is provided
+            if (token == null || token.trim().isEmpty()) {
+                return createErrorResponse("TOKEN_MISSING\nNo GitHub token provided");
+            }
+
+            // GitHub API endpoint to validate token (get user info)
+            URL url = new URL("https://api.github.com/user");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "token " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                // Token is valid - read user info
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+
+                    JSONObject user = new JSONObject(response.toString());
+                    String username = user.optString("login", "unknown");
+                    
+                    Log.i(TAG, "✓ GitHub token is valid for user: " + username);
+                    return createSuccessResponse("TOKEN_VALID\nUSERNAME:" + username);
+                }
+            } else if (responseCode == 401) {
+                Log.w(TAG, "Invalid GitHub token");
+                return createErrorResponse("TOKEN_INVALID\nThe provided GitHub token is invalid or expired");
+            } else {
+                Log.w(TAG, "GitHub API error during token validation: HTTP " + responseCode);
+                return createErrorResponse("TOKEN_VALIDATION_FAILED\nGitHub API error: HTTP " + responseCode);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error validating GitHub token", e);
+            return createErrorResponse("TOKEN_VALIDATION_ERROR\n" + e.getMessage());
         }
     }
 

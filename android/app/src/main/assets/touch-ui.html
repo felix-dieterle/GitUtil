@@ -544,6 +544,111 @@ return{success:false,output:`Connection failed: ${err.message}`};
 }
 };
 
+// Helper function to validate GitHub token and prompt if needed
+// Returns: { valid: boolean, token: string|null, aborted: boolean }
+const ensureValidGitHubToken = async () => {
+    // Try to get existing token from state or localStorage
+    let token = WidgetState.githubToken || localStorage.getItem('gitutil_github_token') || '';
+    
+    // If token exists, validate it
+    if (token && token.trim()) {
+        console.log('[TOKEN] Validating existing GitHub token...');
+        const validationResult = await callWrapper('validate-github-token', [token]);
+        
+        if (validationResult.success && validationResult.output.includes('TOKEN_VALID')) {
+            console.log('[TOKEN] ✓ Token is valid');
+            return { valid: true, token: token, aborted: false };
+        } else {
+            console.log('[TOKEN] ✗ Existing token is invalid');
+            // Clear invalid token
+            WidgetState.githubToken = '';
+            localStorage.removeItem('gitutil_github_token');
+            token = '';
+        }
+    }
+    
+    // No valid token - prompt user
+    console.log('[TOKEN] No valid token found - prompting user...');
+    return await promptForGitHubToken();
+};
+
+// Show a prompt dialog for GitHub token input
+// Returns: { valid: boolean, token: string|null, aborted: boolean }
+const promptForGitHubToken = async () => {
+    return new Promise((resolve) => {
+        // Save current view to restore later
+        const previousView = WidgetState.lastView;
+        
+        // Clear and show GitHub auth view
+        Nodes.githubTokenBox.value = '';
+        hideMsg(Nodes.githubAuthMsg);
+        switchView(Nodes.githubAuthView);
+        
+        // Store original handlers
+        const originalAuthHandler = Nodes.githubAuthBtn.onclick;
+        const originalCancelHandler = Nodes.githubAuthCancelBtn.onclick;
+        
+        // Set up temporary handlers for this prompt
+        Nodes.githubAuthBtn.onclick = async () => {
+            const token = Nodes.githubTokenBox.value.trim();
+            if (!token) {
+                showMsg(Nodes.githubAuthMsg, 'Please enter your GitHub token', 'bad');
+                return;
+            }
+            
+            hideMsg(Nodes.githubAuthMsg);
+            setBusy(Nodes.githubAuthBtn, true);
+            showGlobalLoading('Validating token...', 'Checking GitHub authentication');
+            
+            try {
+                const validationResult = await callWrapper('validate-github-token', [token]);
+                
+                if (validationResult.success && validationResult.output.includes('TOKEN_VALID')) {
+                    // Token is valid - save it
+                    WidgetState.githubToken = token;
+                    localStorage.setItem('gitutil_github_token', token);
+                    
+                    // Restore original handlers
+                    Nodes.githubAuthBtn.onclick = originalAuthHandler;
+                    Nodes.githubAuthCancelBtn.onclick = originalCancelHandler;
+                    
+                    // Restore previous view
+                    if (previousView) {
+                        switchView(previousView);
+                    }
+                    
+                    hideGlobalLoading();
+                    setBusy(Nodes.githubAuthBtn, false);
+                    
+                    resolve({ valid: true, token: token, aborted: false });
+                } else {
+                    const errorMsg = validationResult.output || validationResult.errors || 'Token validation failed';
+                    showMsg(Nodes.githubAuthMsg, errorMsg.replace('TOKEN_INVALID\\n', ''), 'bad');
+                    setBusy(Nodes.githubAuthBtn, false);
+                    hideGlobalLoading();
+                }
+            } catch (e) {
+                showMsg(Nodes.githubAuthMsg, `Error: ${e.message}`, 'bad');
+                setBusy(Nodes.githubAuthBtn, false);
+                hideGlobalLoading();
+            }
+        };
+        
+        Nodes.githubAuthCancelBtn.onclick = () => {
+            // Restore original handlers
+            Nodes.githubAuthBtn.onclick = originalAuthHandler;
+            Nodes.githubAuthCancelBtn.onclick = originalCancelHandler;
+            
+            // Restore previous view
+            if (previousView) {
+                switchView(previousView);
+            }
+            
+            resolve({ valid: false, token: null, aborted: true });
+        };
+    });
+};
+
 const parseSnapshots=(raw)=>{
 const blocks=raw.split('SNAPSHOT_BEGIN').filter(b=>b.trim());
 return blocks.map(b=>{
@@ -766,8 +871,21 @@ return;
 }
 hideMsg(Nodes.githubAuthMsg);
 setBusy(Nodes.githubAuthBtn,true);
-showGlobalLoading('Connecting to GitHub...','Fetching repositories');
+showGlobalLoading('Validating token...','Checking GitHub authentication');
 try{
+// First validate the token
+const validationRes = await callWrapper('validate-github-token', [token]);
+if (!validationRes.success || !validationRes.output.includes('TOKEN_VALID')) {
+const errorMsg = validationRes.errors || validationRes.output || 'Token validation failed';
+console.error('[GitUtil] Token validation failed:', errorMsg);
+showMsg(Nodes.githubAuthMsg, errorMsg.replace('TOKEN_INVALID\n', '').replace('TOKEN_MISSING\n', ''), 'bad');
+setBusy(Nodes.githubAuthBtn, false);
+hideGlobalLoading();
+return;
+}
+
+// Token is valid - now fetch repositories
+showGlobalLoading('Connecting to GitHub...','Fetching repositories');
 const listRes=await callWrapper('list-github-repos',[token]);
 if(listRes.success&&listRes.output.includes('GITHUB_REPOS_BEGIN')){
 WidgetState.githubToken=token;
@@ -806,7 +924,9 @@ const cloneGitHubRepo=async(url,name)=>{
 hideMsg(Nodes.githubBrowserMsg);
 showGlobalLoading(`Cloning ${name}...`,'This may take a few minutes');
 try{
-const cloneRes=await callWrapper('clone-repository',[url,name]);
+// Use the GitHub token for cloning (important for private repos)
+const token = WidgetState.githubToken || localStorage.getItem('gitutil_github_token') || '';
+const cloneRes=await callWrapper('clone-repository', token ? [url, name, token] : [url, name]);
 if(cloneRes.success&&cloneRes.output.includes('CLONE_SUCCESS')){
 const match=cloneRes.output.match(/:(.*)/);
 if(match){
@@ -1014,6 +1134,26 @@ console.log('[ROLLBACK] User cancelled rollback at confirmation dialog');
 return;
 }
 hideMsg(Nodes.rollbackMsg);
+
+// Validate GitHub token before proceeding
+console.log('[ROLLBACK] Checking GitHub token...');
+showGlobalLoading('Validating GitHub token...', 'Please wait');
+const tokenCheck = await ensureValidGitHubToken();
+hideGlobalLoading();
+
+if (tokenCheck.aborted) {
+console.log('[ROLLBACK] User aborted token input - rollback cancelled');
+showMsg(Nodes.rollbackMsg, '⚠️ Rollback cancelled - GitHub token required for push to remote', 'alert');
+return;
+}
+
+if (!tokenCheck.valid) {
+console.log('[ROLLBACK] No valid GitHub token - rollback cancelled');
+showMsg(Nodes.rollbackMsg, '⚠️ Rollback cancelled - valid GitHub token required', 'alert');
+return;
+}
+
+console.log('[ROLLBACK] ✓ GitHub token validated');
 console.log('[ROLLBACK] ========================================');
 console.log('[ROLLBACK] User confirmed rollback operation');
 console.log('[ROLLBACK] Target commit:', WidgetState.picked);
@@ -1028,10 +1168,9 @@ showGlobalLoading('Performing rollback...','Reverting to selected commit');
 setBusy(Nodes.rollbackBtn,true);
 try{
 console.log('[ROLLBACK] Calling wrapper: apply-rollback');
-// Get GitHub token from state (if available)
-const githubToken=WidgetState.githubToken||localStorage.getItem('gitutil_github_token')||'';
-const wrapperArgs=githubToken?[WidgetState.loc,WidgetState.picked,githubToken]:[WidgetState.loc,WidgetState.picked];
-console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked,githubToken?'(token provided)':'(no token)']);
+// Use validated token
+const wrapperArgs = [WidgetState.loc, WidgetState.picked, tokenCheck.token];
+console.log('[ROLLBACK] Wrapper arguments:', [WidgetState.loc,WidgetState.picked,'(token provided)']);
 const res=await callWrapper('apply-rollback',wrapperArgs);
 console.log('[ROLLBACK] Wrapper execution completed');
 console.log('[ROLLBACK] Response object:', JSON.stringify(res,null,2));
