@@ -513,6 +513,11 @@ const callWrapper=async(wrapperName,args=[])=>{
 console.log(`[GitUtil] Calling wrapper: ${wrapperName}`, args);
 try{
 if(typeof AndroidBridge !== 'undefined'){
+// Add a small delay to allow UI rendering (loading indicators) before blocking call
+// AndroidBridge.executeWrapper is synchronous and blocks the JavaScript thread
+// This prevents UI updates from being painted. Adding a delay allows the browser
+// to render pending UI changes (like showing the loading overlay) before the call.
+await new Promise(resolve => setTimeout(resolve, 50));
 const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
 const parsed=JSON.parse(result);
 logWrapperResult(wrapperName, parsed);
