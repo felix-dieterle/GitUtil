@@ -746,7 +746,7 @@ renderGitHubRepos(WidgetState.githubRepos);
 switchView(Nodes.githubBrowserView);
 hideMsg(Nodes.githubBrowserMsg);
 }else{
-const errorMsg=listRes.output||'Failed to connect to GitHub';
+const errorMsg=listRes.errors||listRes.output||'Failed to connect to GitHub';
 console.error('[GitUtil] GitHub connection failed:', errorMsg);
 console.error('[GitUtil] GitHub API response:', listRes);
 showMsg(Nodes.githubAuthMsg,errorMsg,'bad');
