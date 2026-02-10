@@ -6,6 +6,7 @@ import android.webkit.JavascriptInterface;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.ResetCommand;
+import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -278,8 +279,7 @@ public class GitBridge {
                         
                         // Check if this is an authentication error by examining exception type and message
                         // JGit throws TransportException for authentication failures
-                        boolean isAuthError = (pushEx.getClass().getName().contains("TransportException") ||
-                                             pushEx.getClass().getName().contains("InvalidRemoteException")) &&
+                        boolean isAuthError = (pushEx instanceof TransportException) &&
                                             (errorMsg.contains("Authentication") || 
                                              errorMsg.contains("CredentialsProvider") ||
                                              errorMsg.contains("not authorized") ||
@@ -291,7 +291,8 @@ public class GitBridge {
                             stepOutput.append("STEP_STATUS:push:failed\n");
                             stepOutput.append("STEP_DETAIL:Push failed due to authentication\n");
                             stepOutput.append("STEP_DETAIL:Local rollback succeeded - remote was not updated\n");
-                            stepOutput.append("STEP_DETAIL:To push manually, use: git push --force-with-lease origin ").append(currentBranch).append("\n");
+                            stepOutput.append("STEP_DETAIL:⚠️  Manual push required to update remote: git push --force origin ").append(currentBranch).append("\n");
+                            stepOutput.append("STEP_DETAIL:Note: Force push will overwrite remote history with local changes\n");
                             Log.w(TAG, "⚠ Push failed due to authentication - local rollback succeeded");
                             Log.w(TAG, "Authentication error: " + errorMsg);
                             Log.i(TAG, "Local rollback completed successfully");

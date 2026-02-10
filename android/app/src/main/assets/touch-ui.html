@@ -1011,13 +1011,14 @@ if(res.errors)parseStepOutput(res.errors);
 
 if(res.success&&res.output.includes('ROLLBACK_SUCCESS:')){
 console.log('[ROLLBACK] ✓ Rollback completed successfully');
-console.log('[ROLLBACK] New HEAD is now at:', WidgetState.picked.substring(0,8));
+const commitShort = WidgetState.picked.substring(0,8);
+console.log('[ROLLBACK] New HEAD is now at:', commitShort);
 // Check if this was a local-only rollback (remote not updated due to auth)
 if(res.output.includes('ROLLBACK_SUCCESS_LOCAL_ONLY:')){
-showMsg(Nodes.rollbackMsg,`✓ Rolled back to ${WidgetState.picked.substring(0,8)}<br><small>⚠️ Local only - remote not updated (authentication required)</small>`,'alert');
+showMsg(Nodes.rollbackMsg,`✓ Rolled back to ${commitShort}<br><small>⚠️ Local only - remote not updated (authentication required)</small>`,'alert');
 console.log('[ROLLBACK] Note: This was a local-only rollback - remote was not updated');
 }else{
-showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${WidgetState.picked.substring(0,8)}`,'good');
+showMsg(Nodes.rollbackMsg,`✓ Successfully rolled back to ${commitShort}`,'good');
 }
 console.log('[ROLLBACK] Refreshing timeline in 2 seconds...');
 setTimeout(async()=>{
