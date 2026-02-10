@@ -274,16 +274,41 @@ public class GitBridge {
                         stepOutput.append("STEP_STATUS:push:completed\n");
                         stepOutput.append("STEP_DETAIL:Successfully pushed to remote\n");
                     } catch (Exception pushEx) {
-                        stepOutput.append("STEP_STATUS:push:failed\n");
-                        stepOutput.append("STEP_DETAIL:Push to remote failed\n");
-                        Log.e(TAG, "ERROR: Push to remote failed");
-                        Log.e(TAG, "Push error: " + (pushEx.getMessage() != null ? pushEx.getMessage() : "unknown"));
-                        
-                        // Rollback: Restore from backup branch
-                        rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
-                        
                         String errorMsg = pushEx.getMessage() != null ? pushEx.getMessage() : pushEx.getClass().getSimpleName();
-                        return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nPush to remote failed - changes rolled back\n" + errorMsg);
+                        
+                        // Check if this is an authentication error
+                        boolean isAuthError = errorMsg.contains("Authentication") || 
+                                            errorMsg.contains("CredentialsProvider") ||
+                                            errorMsg.contains("not authorized") ||
+                                            errorMsg.contains("authentication failed");
+                        
+                        if (isAuthError) {
+                            // Authentication failed - keep local changes but warn user
+                            stepOutput.append("STEP_STATUS:push:failed\n");
+                            stepOutput.append("STEP_DETAIL:Push failed due to authentication\n");
+                            stepOutput.append("STEP_DETAIL:Local rollback succeeded - remote was not updated\n");
+                            stepOutput.append("STEP_DETAIL:To push manually, use: git push --force-with-lease\n");
+                            Log.w(TAG, "⚠ Push failed due to authentication - local rollback succeeded");
+                            Log.w(TAG, "Authentication error: " + errorMsg);
+                            Log.i(TAG, "Local rollback completed successfully");
+                            Log.i(TAG, "Note: Remote repository was not updated");
+                            Log.i(TAG, "Backup branch retained: " + backupBranchName);
+                            
+                            // Return success since local rollback worked, just with a warning about remote
+                            Log.i(TAG, "========================================");
+                            return createSuccessResponse(stepOutput.toString() + "ROLLBACK_SUCCESS_LOCAL_ONLY: " + commitHash);
+                        } else {
+                            // Other push error - rollback the changes to maintain consistency
+                            stepOutput.append("STEP_STATUS:push:failed\n");
+                            stepOutput.append("STEP_DETAIL:Push to remote failed\n");
+                            Log.e(TAG, "ERROR: Push to remote failed");
+                            Log.e(TAG, "Push error: " + errorMsg);
+                            
+                            // Rollback: Restore from backup branch
+                            rollbackToBackup(git, backupBranchName, currentHead, stepOutput);
+                            
+                            return createErrorResponse(stepOutput.toString(), "ROLLBACK_FAILED\nPush to remote failed - changes rolled back\n" + errorMsg);
+                        }
                     }
                 } else {
                     // No remote configured - skip push and succeed
