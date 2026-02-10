@@ -186,6 +186,7 @@ font-size:13px;color:var(--ink-500)
 </div>
 <div class="btn-row">
 <button id="browseBtn" class="action-btn btn-neutral">📂 Custom Path</button>
+<button id="viewLogsBtnSelector" class="action-btn btn-secondary">📋 View Logs</button>
 </div>
 </div>
 <div id="repoMsg"></div>
@@ -421,6 +422,7 @@ rollbackBtn:document.getElementById('rollbackBtn'),
 switchBtn:document.getElementById('switchBtn'),
 rollbackMsg:document.getElementById('rollbackMsg'),
 viewLogsBtn:document.getElementById('viewLogsBtn'),
+viewLogsBtnSelector:document.getElementById('viewLogsBtnSelector'),
 cleanupBtn:document.getElementById('cleanupBtn'),
 // Progress tracker
 progressTracker:document.getElementById('progressTracker'),
@@ -503,7 +505,13 @@ try{
 if(typeof AndroidBridge !== 'undefined'){
 const result=AndroidBridge.executeWrapper(wrapperName,JSON.stringify(args));
 const parsed=JSON.parse(result);
+// Log concise summary for pull-timeline to keep logs readable
+if(wrapperName === 'pull-timeline' && parsed.success){
+const snapshotCount = (parsed.output.match(/SNAPSHOT_BEGIN/g) || []).length;
+console.log(`[GitUtil] Wrapper ${wrapperName} result: {"success":true,"output":"${snapshotCount} commits fetched","errors":"","exit_code":0}`);
+}else{
 console.log(`[GitUtil] Wrapper ${wrapperName} result:`, parsed);
+}
 return parsed;
 }else{
 const response=await fetch('http://localhost:8765/exec-wrapper',{
@@ -517,7 +525,13 @@ console.error(`[GitUtil] ${error}`);
 throw new Error(error);
 }
 const result=await response.json();
+// Log concise summary for pull-timeline to keep logs readable
+if(wrapperName === 'pull-timeline' && result.success){
+const snapshotCount = (result.output.match(/SNAPSHOT_BEGIN/g) || []).length;
+console.log(`[GitUtil] Wrapper ${wrapperName} result: {"success":true,"output":"${snapshotCount} commits fetched","errors":"","exit_code":0}`);
+}else{
 console.log(`[GitUtil] Wrapper ${wrapperName} result:`, result);
+}
 return result;
 }
 }catch(err){
@@ -1105,6 +1119,12 @@ renderSnapshots(WidgetState.snapshots,filterText);
 
 // View logs button
 Nodes.viewLogsBtn.onclick=()=>{
+switchView(Nodes.logViewer,true);
+renderLogs();
+};
+
+// View logs button from repository selector
+Nodes.viewLogsBtnSelector.onclick=()=>{
 switchView(Nodes.logViewer,true);
 renderLogs();
 };
