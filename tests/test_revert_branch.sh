@@ -271,6 +271,7 @@ echo ""
 echo "Test Group: Backup Branch Push to Remote"
 # Check if backup branch exists on remote
 cd "$TEST_DIR/remote_repo.git"
+REMOTE_BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | sort | tail -1 | tr -d ' ')
 REMOTE_BACKUP_BRANCHES=$(git branch --list "backup/before-rollback-*" | wc -l)
 cd - > /dev/null
 
@@ -284,9 +285,8 @@ else
 fi
 
 # Verify the remote backup branch points to the correct commit (pre-rollback HEAD)
-cd "$TEST_DIR/remote_repo.git"
-REMOTE_BACKUP_BRANCH_NAME=$(git branch --list "backup/before-rollback-*" | sort | tail -1 | tr -d ' ')
 if [ -n "$REMOTE_BACKUP_BRANCH_NAME" ]; then
+    cd "$TEST_DIR/remote_repo.git"
     REMOTE_BACKUP_COMMIT=$(git rev-parse "$REMOTE_BACKUP_BRANCH_NAME" 2>/dev/null)
     cd - > /dev/null
     
@@ -299,7 +299,6 @@ if [ -n "$REMOTE_BACKUP_BRANCH_NAME" ]; then
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 else
-    cd - > /dev/null
     TESTS_RUN=$((TESTS_RUN + 1))
     echo -e "${RED}✗${NC} FAIL: Could not find backup branch on remote to verify commit"
     TESTS_FAILED=$((TESTS_FAILED + 1))
